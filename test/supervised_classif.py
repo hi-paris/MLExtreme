@@ -7,6 +7,14 @@ from sklearn.metrics import accuracy_score
 from MLExtrem.utils import dataset_generation as dg, model_generation as mg, norm_generation as ng
 from MLExtrem.supervised.classification import Classifier
 
+# Parameters for data generation
+n = 10000  
+Dim = 2  
+split = 0.2  
+alpha = 0.9  
+Hill_index = 1  
+angle = 0.25 
+
 # Data generation
 data = dg.gen_multilog(n, Dim, alpha, Hill_index)
 label = dg.gen_label2(data, angle=angle)
