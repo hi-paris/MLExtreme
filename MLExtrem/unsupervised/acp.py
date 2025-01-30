@@ -1,7 +1,7 @@
 # file.py
-from acp.acp_plot import *
-from acp.acp_function import *
-from acp.acp_useful import *
+from acp_module.acp_plot import *
+from acp_module.acp_function import *
+from acp_module.acp_useful import *
 
 
 __all__ = [name for name in dir() if not name.startswith("_")]
