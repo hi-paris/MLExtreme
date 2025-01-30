@@ -71,4 +71,33 @@ def gen_label2(Matrix,angle=0.2): #PA
 
 
 
+def GenerateRVdata(num_samples, grid, alpha, alphanoise, scalenoise=5, om1=1, om2=2, om3=3, om4=4):#ACP
+    a1 = rpareto(num_samples, alpha=alpha) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a2 = rpareto(num_samples, alpha=alpha) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a3 = scalenoise * rpareto(num_samples, alpha=alphanoise) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a4 = scalenoise * rpareto(num_samples, alpha=alphanoise) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    
+    result = np.dot(a1[:, None], (1 + np.sin(2 * np.pi * om1 * grid))[None, :]) + \
+             np.dot(a2[:, None], (1 + np.cos(2 * np.pi * om2 * grid))[None, :]) + \
+             np.dot(a3[:, None], (1 + np.sin(2 * np.pi * om3 * grid))[None, :]) + \
+             np.dot(a4[:, None], (1 + np.cos(2 * np.pi * om4 * grid))[None, :])
+    
+    return result
+
+def GenerateRVdatabis(num_samples, grid, alpha, sd, scalenoise=5, om1=1, om2=2, om3=3, om4=4, om5=5, om6=6):#ACP
+    a1 = rpareto(num_samples, alpha=alpha)
+    a2 = 0.8 * rpareto(num_samples, alpha=alpha)
+    a3 = scalenoise * np.random.normal(0, sd, size=num_samples)
+    a4 = 0.8 * scalenoise * np.random.normal(0, sd, size=num_samples)
+    a5 = 0.6 * scalenoise * np.random.normal(0, sd, size=num_samples)
+    a6 = 0.4 * scalenoise * np.random.normal(0, sd, size=num_samples)
+
+    result = np.dot(a1[:, None], (np.sqrt(2) * np.sin(2 * np.pi * om1 * grid))[None, :]) + \
+             np.dot(a2[:, None], (np.sqrt(2) * np.cos(2 * np.pi * om2 * grid))[None, :]) + \
+             np.dot(a3[:, None], (np.sqrt(2) * np.sin(2 * np.pi * om3 * grid))[None, :]) + \
+             np.dot(a4[:, None], (np.sqrt(2) * np.cos(2 * np.pi * om4 * grid))[None, :]) + \
+             np.dot(a5[:, None], (np.sqrt(2) * np.sin(2 * np.pi * om5 * grid))[None, :]) + \
+             np.dot(a6[:, None], (np.sqrt(2) * np.cos(2 * np.pi * om6 * grid))[None, :])
+    
+    return result
 
