@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score
 
 
-## dans le code de Nathan, trois train : sur l'ensemble du Dataset, sur la partie extreme, et extrem normalisé (aka angulaire)
-## rapport MSE : 100,10,1
+
 class Regressor:
     def __init__(self, model, norm_func, k=0):
         """
@@ -28,25 +27,21 @@ class Regressor:
             self.k = 4 * int(np.sqrt(len(X_train) + len(X_test)))
 
             
-        # Sélection des points extrêmes
         Norm_X_train = self.norm_func(X_train)
         threshold = np.percentile(Norm_X_train, 100 * (1 - self.k / len(Norm_X_train)))
         X_train_extrem = X_train[Norm_X_train >= threshold]
         
-        # Normalisation sur la sphère unité
         X_train_unit = X_train_extrem / ((Norm_X_train[Norm_X_train >= threshold])[:, np.newaxis])
         y_train_extrem = y_train[Norm_X_train >= threshold]
         
-        # Entraînement du modèle
         self.model.fit(X_train_unit, y_train_extrem)
         
-        #Sauvegarde threshold
         self.threshold=threshold
         #self.model=model
         
         return threshold, X_train_unit
 
-    def predict(self, X_test, threshold=0): ##Add normalize Y 
+    def predict(self, X_test, threshold=0): ##PA : Add normalize Y ? 
 
 
         if threshold==0:
@@ -61,7 +56,6 @@ class Regressor:
         mask_test = Norm_X_test >= threshold
         X_test_extrem = X_test[mask_test]
         
-        # Normalisation sur la sphère unité
         X_test_unit = X_test_extrem / ((Norm_X_test[Norm_X_test >= threshold])[:, np.newaxis])
         y_pred = self.model.predict(X_test_unit)
         
