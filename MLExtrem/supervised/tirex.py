@@ -11,7 +11,7 @@ def tirex_transform(X, y, n_components, k=None, method="FO", mode="TIREX", get_S
         raise ValueError("X and y must have the same length and k must be within a valid range.")
 
     first_cov = np.cov(X.T)
-    q, r = np.linalg.qr(first_cov) #QR décomposition, rename  ?
+    q, r = np.linalg.qr(first_cov) #PA : QR décomposition, rename  ?
     independent_column = [ii for ii in range(len(first_cov)) if (first_cov[ii, ii] > 0 and abs(r[ii, ii]) > 1e-7)]
     X_f = X[:, independent_column]
 
