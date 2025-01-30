@@ -26,7 +26,7 @@ def gen_PositiveStable(n,alpha,seed=np.random.randint(2**31)): # From Nathan Hue
 
 
 def gen_multilog(n,Dim,alpha,Hill_index,seed=np.random.randint(2**31)):  # From Nathan Huet
-    #Assymetric !!!!!!!!!!!! ALgo 2.1 dans le papier 
+    #Assymetric ? ALgo 2.1 in the article
     
     """
     Generate multivariate logistic random variables.  
