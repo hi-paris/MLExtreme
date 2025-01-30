@@ -1,5 +1,7 @@
 # file.py
 from acp.acp_plot import *
+from acp.acp_function import *
+from acp.acp_useful import *
 
-# Définir __all__ pour contrôler ce qui est exporté
+
 __all__ = [name for name in dir() if not name.startswith("_")]
