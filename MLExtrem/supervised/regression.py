@@ -49,7 +49,7 @@ class Regressor:
         X_train : array-like of shape (n_samples, n_features)
             The training input samples.
 
-        X_test : array-like of shape (n_samples, n_features)
+        X_test : array-like of shape (n_samples_test, n_features)
             The test input samples.
 
         y_train : array-like of shape (n_samples,)
@@ -67,8 +67,8 @@ class Regressor:
             raise ValueError("norm_func must be callable")
 
         if self.k == 0:
-            self.k = 4 * int(np.sqrt(len(X_train) + len(X_test)))
-
+            #self.k = 4 * int(np.sqrt(len(X_train) + len(X_test)))
+            self.k = 4 * int(np.sqrt(len(X_train)))
         Norm_X_train = self.norm_func(X_train)
         self.threshold = np.percentile(Norm_X_train, 100 * (1 - self.k / len(Norm_X_train)))
         X_train_extrem = X_train[Norm_X_train >= self.threshold]
@@ -118,14 +118,15 @@ class Regressor:
 
         return y_pred, mask_test, X_test_unit
 
-    def plot_predictions(self, X, y_test, y_pred):
+    def plot_predictions(self, X, y_test, y_pred): ## ! X is not used; remove?
         """
         Display predicted vs actual values.
 
         Parameters
         ----------
         X : array-like of shape (n_samples, n_features)
-            The input samples.
+            The input samples. (should be extreme, i.e. should
+            have norm larger than self.threshold) 
 
         y_test : array-like of shape (n_samples,)
             The true values.
@@ -173,7 +174,7 @@ class Regressor:
             The target values.
 
         cv : int, optional
-            The number of folds for cross-validation.
+            The number of folds for K-fold cross-validation.
 
         scoring : str, optional
             The scoring metric for cross-validation.

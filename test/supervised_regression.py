@@ -12,18 +12,23 @@ from MLExtrem.supervised.regression import Regressor
 n = 100000
 Dim = 2
 split = 0.2
-alpha = 0.9
+alpha = 0.2
 Hill_index = 1
 angle = 0.25
 
 # Data generation
 all_data = dg.gen_multilog(n, Dim + 1, alpha, Hill_index)
 data = all_data[:, :Dim]  # Select feature columns
-label = all_data[:, Dim]  # Select label column
+row_norms = np.linalg.norm(all_data, axis=1)
+
+label = all_data[:, Dim]/row_norms  # label column is the last column divided by the norm of each line 
 
 # Optional visualization of the generated data
-# plt.scatter(data[:, 0], data[:, 1], alpha=0.7)
-# plt.show()
+plt.scatter(data[:, 0], data[:, 1], alpha=0.7, c = label)
+plt.xlim(0,10**3)
+plt.ylim(0,10**3)
+plt.colorbar(label='Color scale')
+plt.show()
 
 # Splitting the data into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=split, random_state=42)
@@ -48,3 +53,29 @@ y_test_extrem = y_test[mask_test]  # Filter test labels based on mask
 MSE = mean_squared_error(y_test_extrem, y_pred)
 print(f'MSE: {MSE:.4f}')
 
+## reconstruction of the third column:
+## here,  label = y  = X_3/\sqrt{X_1^2 + X_2^2 + X_3^3}; all entries nonnegative.
+##straightforward inversion yields:
+# X_3 =  y/ sqrt{1 - y^2} *  sqrt(x_1^2 + X_2^2)
+
+def inverse_transform_target(y,x): ## x is an array of extreme test points, y is the predicted target between 0 and 1. 
+    ## this is the inverse transformation relative to the one used to create the label 
+    norm_x = np.linalg.norm(x, ord=2, axis=1)
+    predicted_x = y/np.sqrt(1-y**2) * norm_x
+    return predicted_x
+
+## test of the above function 
+true_recons = inverse_transform_target(label, data )
+np.sum((true_recons - all_data[:,2])**2)
+## good
+
+predicted_X3 = inverse_transform_target(y_pred, X_test[mask_test,:])
+true_X3 = inverse_transform_target(y_test_extrem,X_test[mask_test,:])
+
+
+plt.scatter(true_X3, predicted_X3 , alpha=0.5)
+xmax = 10**3
+plt.xlim(0,xmax)
+plt.ylim(0,xmax)
+plt.plot([0, xmax], [0, xmax], 'r--', label='Diagonal: y = x')
+plt.show()

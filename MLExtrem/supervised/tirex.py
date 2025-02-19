@@ -21,7 +21,7 @@ def tirex_transform(X, y, n_components, k=None, method="FO", mode="TIREX", get_S
         The number of samples to consider. If None, it is set to the number of samples in X.
 
     method : str, optional
-        The method to use for transformation. Must be "FO" or "SO".
+        The method to use for transformation. Must be "FO" (First Order) or "SO" (Second Order).
 
     mode : str, optional
         The mode to use for transformation. Must be "TIREX" or "CUME".
