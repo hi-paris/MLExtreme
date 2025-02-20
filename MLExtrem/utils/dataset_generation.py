@@ -1,6 +1,6 @@
-import scipy.stats as stat
+from scipy.stats import pareto
 import numpy as np
-
+from EVT_basics import *
 
 ######Multivariate symmetric logistic Model
 ####see "Simulating Multivariate Extreme Value Distributions of Logistic Type", 2003, A. Stephenson for more details
@@ -81,32 +81,6 @@ def gen_label2(Matrix,angle=0.2): #PA
     ]
     return np.array(label)
 
-## new function(anne)
-def rpareto(n, alpha, x_min=1):
-    """
-    Generate samples from a Pareto distribution with shape parameter `alpha` and 
-    minimum value `x_min` (default is 1).
-    
-    Parameters
-    ----------
-    n : int
-        The number of random samples to generate.
-    alpha : float
-        The shape parameter of the Pareto distribution (alpha > 0).
-    x_min : float, optional
-        The minimum value (scale) for the Pareto distribution (default is 1).
-    
-    Returns
-    -------
-    ndarray, shape (n,)
-        A NumPy array of `n` random samples from the Pareto distribution.
-    """
-    # Generate uniform random variables U
-    U = np.random.uniform(0, 1, n)
-    
-    # Apply inverse transform sampling to generate Pareto samples
-    return x_min * (1 - U) ** (-1 / alpha)
-
 
 
 
@@ -115,7 +89,7 @@ def GenerateRVdata(num_samples, grid, alpha, alphanoise, scalenoise=5, om1=1, om
     Generate random variate (RV) data using Pareto-distributed coefficients and sinusoidal basis functions.
 
     This function generates `num_samples` of data points using a combination of:
-    - Pareto-distributed random variables (`rpareto`)
+    - Pareto-distributed random variables (`scipy.stats.pareto.rvs()`)
     - Sine and cosine basis functions with different frequencies (`om1`, `om2`, `om3`, `om4`)
     - Additional noise components controlled by `alphanoise` and `scalenoise`
 
@@ -147,7 +121,6 @@ def GenerateRVdata(num_samples, grid, alpha, alphanoise, scalenoise=5, om1=1, om
 
     Notes:
     ------
-    - `rpareto`  generates Pareto-distributed random variables.
     - The random coefficients `a1`, `a2`, `a3`, and `a4` are symmetrically distributed around zero.
     - The resulting dataset is constructed using sinusoidal basis functions with different frequencies.
 
@@ -165,10 +138,10 @@ def GenerateRVdata(num_samples, grid, alpha, alphanoise, scalenoise=5, om1=1, om
     print(data.shape)  # (500, 100)
     ```
     """
-    a1 = rpareto(num_samples, alpha=alpha) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
-    a2 = rpareto(num_samples, alpha=alpha) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
-    a3 = scalenoise * rpareto(num_samples, alpha=alphanoise) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
-    a4 = scalenoise * rpareto(num_samples, alpha=alphanoise) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a1 = pareto.rvs(alpha, size= num_samples) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a2 = pareto.rvs(alpha, size= num_samples) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a3 = scalenoise * pareto.rvs(alphanoise, size= num_samples) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
+    a4 = scalenoise * pareto.rvs(alphanoise, size= num_samples) * (2 * (np.random.uniform(size=num_samples) > 0.5) - 1)
     
     result = np.dot(a1[:, None], (1 + np.sin(2 * np.pi * om1 * grid))[None, :]) + \
              np.dot(a2[:, None], (1 + np.cos(2 * np.pi * om2 * grid))[None, :]) + \
@@ -183,7 +156,7 @@ def GenerateRVdatabis(num_samples, grid, alpha, sd, scalenoise=5, om1=1, om2=2, 
     with sinusoidal basis functions.
 
     This function generates `num_samples` of data points using a combination of:
-    - Pareto-distributed random variables (`rpareto`)
+    - Pareto-distributed random variables (`scipy.stats.pareto.rvs()`)
     - Gaussian noise components controlled by `sd` and `scalenoise`
     - Sine and cosine basis functions with different frequencies (`om1` to `om6`)
 
@@ -233,8 +206,8 @@ def GenerateRVdatabis(num_samples, grid, alpha, sd, scalenoise=5, om1=1, om2=2, 
     print(data.shape)  # (500, 100)
     ```
     """
-    a1 = rpareto(num_samples, alpha=alpha)
-    a2 = 0.8 * rpareto(num_samples, alpha=alpha)
+    a1 = pareto.rvs(alpha, size= num_samples)
+    a2 = 0.8 * pareto.rvs(alpha, size= num_samples)
     a3 = scalenoise * np.random.normal(0, sd, size=num_samples)
     a4 = 0.8 * scalenoise * np.random.normal(0, sd, size=num_samples)
     a5 = 0.6 * scalenoise * np.random.normal(0, sd, size=num_samples)

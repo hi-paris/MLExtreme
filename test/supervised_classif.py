@@ -6,6 +6,8 @@ from sklearn.metrics import accuracy_score
 
 from MLExtrem.utils import dataset_generation as dg, model_generation as mg, norm_generation as ng
 from MLExtrem.supervised.classification import Classifier
+from sklearn.ensemble import RandomForestClassifier
+
 
 # Parameters for data generation
 n = 10000  
@@ -28,7 +30,10 @@ plt.show()
 X_train, X_test, y_train, y_test = train_test_split(data, label, test_size=split, random_state=42)
 
 # Model generation
-model = mg.Get_Model('RandomForest', problem_type='classification')
+## option 1: use mg suggested models
+#model = mg.Get_Model('RandomForest', problem_type='classification')
+## option 2: pick yourself a model in sklearn, previously imported
+model = RandomForestClassifier()
 
 # Normalization function
 norm_func = lambda x: np.linalg.norm(x, ord=2, axis=1)

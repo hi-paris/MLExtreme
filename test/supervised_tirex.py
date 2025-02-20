@@ -35,3 +35,4 @@ extreme_space = tirex_transform(
 # Display the extracted extreme spaces
 print("Extracted extreme spaces (extreme_space):")
 print(extreme_space)
+
