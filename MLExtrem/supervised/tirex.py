@@ -1,3 +1,8 @@
+
+## Author : Anass Aghbalou
+## Contributor : Anne Sabourin, Pierre-Antoine Amiand-Leroy
+
+
 from sklearn.decomposition import PCA
 import numpy as np
 from scipy.linalg import sqrtm
@@ -36,6 +41,10 @@ def tirex_transform(X, y, n_components, k=None, method="FO", mode="TIREX", get_S
 
     extreme_space_X : array-like of shape (n_features, n_components), optional
         The extreme space components in the original feature space, if get_SDR_X is True.
+
+    Citation
+    -------
+    Aghbalou, A. , Portier, F., Sabourin, A., Zhou, C. (2024) Tail inverse regression for dimension reduction with extreme response. Bernoulli.
     """
     if mode not in ["CUME", "TIREX"]:
         raise ValueError("mode must be 'TIREX' or 'CUME'.")
