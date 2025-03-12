@@ -1,7 +1,7 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
-    name='MLExtreme',
-    version='0.1',
-    author='')
-# 
+    name="MLExtreme",
+    version="0.1.0",
+    packages=["source", "MLExtrem"],
+)
