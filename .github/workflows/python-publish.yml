@@ -26,7 +26,10 @@ jobs:
           python-version: "3.x"
 
       - name: Install cibuildwheel
-        run: python -m pip install --upgrade cibuildwheel
+        run: |
+          python -m pip install --upgrade cibuildwheel
+        env:
+          CIBW_ARCHS_MACOS: "x86_64"
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir dist
