@@ -36,16 +36,16 @@ def kth_largest_bin(v_rank, k):
     return v_bin
 
 
-def rank_transformation(x_raw):
-    """Standardize each column to Pareto : v_rank_ij = n_sample/(rank(x_raw_ij) + 1)."""
-    n_sample, n_dim = x_raw.shape
-    mat_rank = np.argsort(x_raw, axis=0)[::-1]
-    x_rank = np.zeros((n_sample, n_dim))
-    for i in range(n_dim):
-        x_rank[mat_rank[:, i], i] = np.arange(n_sample) + 1
-    v_rank = n_sample/x_rank
+# def rank_transformation(x_raw): ## moved in utils/EVT_basics 'rank_transform'
+#     """Standardize each column to Pareto : v_rank_ij = n_sample/(rank(x_raw_ij) + 1)."""
+#     n_sample, n_dim = x_raw.shape
+#     mat_rank = np.argsort(x_raw, axis=0)[::-1]
+#     x_rank = np.zeros((n_sample, n_dim))
+#     for i in range(n_dim):
+#         x_rank[mat_rank[:, i], i] = np.arange(n_sample) + 1
+#     v_rank = n_sample/x_rank
 
-    return v_rank
+#     return v_rank
 
 
 def check_errors(charged_faces, result_faces, dim):

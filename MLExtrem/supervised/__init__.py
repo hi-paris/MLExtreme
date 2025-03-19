@@ -1,3 +1,3 @@
-from .classification import *
-from .regression import *
+from .classification import Classifier
+from .regression import Regressor 
 from .tirex import *

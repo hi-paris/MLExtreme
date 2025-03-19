@@ -7,17 +7,15 @@ from sklearn.metrics import mean_squared_error
 from MLExtrem.utils import dataset_generation as dg, model_generation as mg, norm_generation as ng
 from MLExtrem.supervised.regression import Regressor
 
-
 # Parameters for data generation
 n = 100000
 Dim = 2
 split = 0.2
 alpha = 0.2
-Hill_index = 1
 angle = 0.25
 
 # Data generation
-all_data = dg.gen_multilog(n, Dim + 1, alpha, Hill_index)
+all_data = dg.gen_multilog(n, Dim + 1, alpha)
 data = all_data[:, :Dim]  # Select feature columns
 row_norms = np.linalg.norm(all_data, axis=1)
 
