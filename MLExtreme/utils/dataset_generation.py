@@ -1,15 +1,12 @@
 from scipy.stats import pareto
 import numpy as np
 from .EVT_basics import *
-##from scipy.stats import gamma
+# from scipy.stats import gamma
 from scipy.special import gamma, betaln, loggamma
 import scipy.stats as stat
 import matplotlib.pyplot as plt 
-############################################
-######Multivariate symmetric logistic Model
-############################################
 
-
+# Multivariate symmetric logistic Model
 def gen_PositiveStable(n,alpha,seed=np.random.randint(2**31)): # From Nathan Huet
     """
     Generate positive stable random variables.
@@ -206,7 +203,7 @@ def pdf_dirimix(x, Mu, lnu, wei):
 
     return density
 
-## Example usage
+# Example usage
 # x_single = np.array([0.2, 0.3, 0.5])
 # x_matrix = np.array([[0.2, 0.3, 0.5], [0.4, 0.4, 0.2]])
 # Mu = np.array([[1.5, 2.0], [2.5, 3.0], [3.5, 4.0]])
@@ -229,8 +226,8 @@ def gen_dirimix(n, Mu, lnu, wei):
     n : int
         The number of samples to generate.
     Mu : ndarray, shape (p, k)
-        The matrix of means, where `p` is the number of components, and `k` is the
-        number of mixtures.
+        The matrix of means, where `p` is the number of components,
+        and `k` is the  number of mixtures.
     lnu : ndarray, shape (k,)
         The vector of log-scales (lnu), one for each mixture component.
     wei : ndarray, shape (k,)
@@ -672,9 +669,11 @@ def gen_rv_functional_data_gaussianNoise(num_samples, grid, alpha, sd, scalenois
 
     Notes:
     ------
-    - Unlike `gen_rv_functional_data`, this function includes **Gaussian noise** components instead of Pareto noise for variables `a3`, `a4`, `a5`, and `a6`.
+    - Unlike `gen_rv_functional_data`, this function includes **Gaussian noise**
+      components instead of Pareto noise for variables `a3`, `a4`, `a5`, and `a6`.
     - The sine and cosine components are scaled by `np.sqrt(2)` for normalization.
-    - The function combines six components (instead of four in `gen_rv_functional_data`) using different frequencies.
+    - The function combines six components (instead of four in
+     `gen_rv_functional_data`) using different frequencies.
     
     Example:
     --------

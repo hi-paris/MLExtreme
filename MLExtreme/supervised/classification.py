@@ -5,7 +5,8 @@ from sklearn.model_selection import cross_val_score
 
 class Classifier:
     """
-    A custom classifier that uses a specified model and a normalization function to classify data.
+    A custom classifier that uses a specified model and a
+    normalization function to classify data.
 
     Parameters
     ----------
@@ -16,7 +17,8 @@ class Classifier:
         A function that computes a norm of the input data. Default is L2 norm.
 
     k : int, optional
-        A parameter used to determine the threshold for selecting extreme points.
+        A parameter used to determine the threshold for selecting
+        extreme points.
         If k=0, it is automatically set to 4 * sqrt(n_samples).
 
     Attributes
@@ -36,11 +38,12 @@ class Classifier:
 
     def __init__(self, model, norm_func=None, k=0):
         self.model = model
-        self.norm_func = norm_func if norm_func else lambda x: np.linalg.norm(x, axis=1)
+        self.norm_func = (norm_func if norm_func
+                          else lambda x: np.linalg.norm(x, axis=1))
         self.k = k
         self.threshold = 0
 
-    def fit(self, X_train, X_test, y_train):
+    def fit(self, X_train, y_train):
         """
         Fit the model using extreme points from the training data.
 
@@ -48,9 +51,6 @@ class Classifier:
         ----------
         X_train : array-like of shape (n_samples, n_features)
             The training input samples.
-
-        X_test : array-like of shape (n_samples, n_features)
-            The test input samples.
 
         y_train : array-like of shape (n_samples,)
             The target values for training.
@@ -60,25 +60,27 @@ class Classifier:
         threshold : float
             The computed threshold value.
 
-        X_train_unit : array-like of shape (n_extreme_samples, n_features)
-            The normalized extreme points from the training data.
+        X_train : array-like of shape (n_extreme_samples, n_features)
+            The  extreme points from the training data.
         """
         if not callable(self.norm_func):
             raise ValueError("norm_func must be callable")
 
         if self.k == 0:
-            self.k = 4 * int(np.sqrt(len(X_train) + len(X_test)))
+            self.k = 1 * int(np.sqrt(len(X_train)))
 
         Norm_X_train = self.norm_func(X_train)
-        self.threshold = np.percentile(Norm_X_train, 100 * (1 - self.k / len(Norm_X_train)))
+        self.threshold = np.percentile(Norm_X_train, 100 * (
+            1 - self.k / len(Norm_X_train)))
         X_train_extrem = X_train[Norm_X_train >= self.threshold]
 
-        X_train_unit = X_train_extrem / Norm_X_train[Norm_X_train >= self.threshold][:, np.newaxis]
+        X_train_extrem_unit = X_train_extrem / Norm_X_train[
+            Norm_X_train >= self.threshold][:, np.newaxis]
         y_train_extrem = y_train[Norm_X_train >= self.threshold]
 
-        self.model.fit(X_train_unit, y_train_extrem)
+        self.model.fit(X_train_extrem_unit, y_train_extrem)
 
-        return self.threshold, X_train_unit
+        return self.threshold, X_train_extrem
 
     def predict(self, X_test, threshold=None):
         """
@@ -101,8 +103,8 @@ class Classifier:
         mask_test : array-like of shape (n_samples,)
             A boolean mask indicating which points are extreme.
 
-        X_test_unit : array-like of shape (n_extreme_samples, n_features)
-            The normalized extreme points from the test data.
+        X_test : array-like of shape (n_extreme_samples, n_features)
+            The  extreme points from the test data.
         """
         if threshold is None:
             if self.threshold == 0:
@@ -113,10 +115,11 @@ class Classifier:
         mask_test = Norm_X_test >= threshold
         X_test_extrem = X_test[mask_test]
 
-        X_test_unit = X_test_extrem / Norm_X_test[mask_test][:, np.newaxis]
-        y_pred = self.model.predict(X_test_unit)
+        X_test_extrem_unit = (X_test_extrem /
+                              Norm_X_test[mask_test][:, np.newaxis])
+        y_pred_extrem = self.model.predict(X_test_extrem_unit)
 
-        return y_pred, mask_test, X_test_unit
+        return y_pred_extrem,  X_test_extrem, mask_test,
 
     def plot_classif(self, X, y_test, y_pred):
         """
@@ -134,10 +137,10 @@ class Classifier:
             The predicted labels.
         """
         plt.figure(figsize=(10, 6))
-        plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 0)], X[:, 1][(y_pred == 0) & (y_test == 0)], color='red', marker='o', label='True Negative')
-        plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 1)], X[:, 1][(y_pred == 0) & (y_test == 1)], color='blue', marker='x', label='False Negative')
-        plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 0)], X[:, 1][(y_pred == 1) & (y_test == 0)], color='red', marker='x', label='False Positive')
-        plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 1)], X[:, 1][(y_pred == 1) & (y_test == 1)], color='blue', marker='o', label='True Positive')
+        plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 0)], X[:, 1][(y_pred == 0) & (y_test == 0)], color='blue', marker='o', label='True Negative')
+        plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 1)], X[:, 1][(y_pred == 0) & (y_test == 1)], color='red', marker='x', label='False Negative')
+        plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 0)], X[:, 1][(y_pred == 1) & (y_test == 0)], color='blue', marker='x', label='False Positive')
+        plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 1)], X[:, 1][(y_pred == 1) & (y_test == 1)], color='red', marker='o', label='True Positive')
         plt.title('Classification Results')
         plt.xlabel('Feature 1')
         plt.ylabel('Feature 2')

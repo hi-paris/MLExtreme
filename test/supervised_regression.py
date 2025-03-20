@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
-from MLExtrem.utils import dataset_generation as dg, model_generation as mg, norm_generation as ng
-from MLExtrem.supervised.regression import Regressor
+# from MLExtreme.utils import dataset_generation as dg, model_generation as mg, norm_generation as ng
+# from MLExtreme.supervised.regression import Regressor
+import MLExtreme as mlx
+
 
 # Parameters for data generation
 n = 100000
@@ -15,7 +17,7 @@ alpha = 0.2
 angle = 0.25
 
 # Data generation
-all_data = dg.gen_multilog(n, Dim + 1, alpha)
+all_data = mlx.gen_multilog(n, Dim + 1, alpha)
 data = all_data[:, :Dim]  # Select feature columns
 row_norms = np.linalg.norm(all_data, axis=1)
 
