@@ -1,206 +1,245 @@
+# # Tutorial notebook for classification on extreme covariates
+
+# import os
+# os.getcwd()
+# os.chdir("../")
+# os.getcwd()
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-# from MLExtrem.utils import dataset_generation as dg,
-# from MLExtrem.utils import model_generation as mg, norm_generation as ng
-# from MLExtrem.supervised.classification import Classifier
+from sklearn.metrics import hamming_loss
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
 import MLExtreme as mlx
 
-# temporary, working version, to be removed
-# import os
-# os.getcwd()
-# os.chdir("../")
-# import importlib
-# importlib.reload(mlx)
-
-# 1. toy example with  hard decision boundary in 2D
-# Parameters for data generation
-n = 10000
-Dim = 2
-split = 0.2
-alpha = 0.9
-angle = 0.25
-
-# Data generation
-data = mlx.gen_multilog(n, Dim, alpha)
-label = mlx.gen_label2(data, angle=angle)
-
-# Visualization of the generated data
-colors = np.where(label == 1, 'red', 'blue')
-plt.scatter(data[:, 0], data[:, 1], c=colors, alpha=0.7)
-plt.show()
-
-# Splitting the data into training and test sets
-X_train, X_test, y_train, y_test = train_test_split(data, label,
-                                                    test_size=split,
-                                                    random_state=42)
-
-# Choice of an off-the-shelf classification algorithm
-# see https://scikit-learn.org/stable/supervised_learning.html
-
-# # option 1 (to be removed): use mg suggested models
-# model = mlx.Get_Model('RandomForest', problem_type='classification')
-# option 2: pick yourself a model in sklearn, previously imported
-model = RandomForestClassifier()
-
-
-# Normalization function
+# ###################################################
+# Norm function: L2 norm. change `ord` to 1 or inf for variants 
 def norm_func(x):
     return np.linalg.norm(x, ord=2, axis=1)
 
 
-# Classifier class initialization
-classifier = mlx.Classifier(model, norm_func, k=200)
-
-# Model training
-threshold, X_train_extrem = classifier.fit(X_train,  y_train)
-
-# Prediction on the test data
-y_pred_extrem,  X_test_extrem, mask_test = classifier.predict(X_test, threshold)
-
-# Accuracy evaluation
-y_test_extrem = y_test[mask_test]
-accuracy = accuracy_score(y_test_extrem, y_pred_extrem)
-print(f'Accuracy: {accuracy:.4f}')
-
-# Display classification results
-# show X
-classifier.plot_classif(X_test_extrem, y_test_extrem, y_pred_extrem)
-
-# show Theta
-X_test_extrem_unit = X_test_extrem / norm_func(X_test_extrem)[:,np.newaxis]
-classifier.plot_classif(X_test_extrem_unit, y_test_extrem, y_pred_extrem)
+# ####################################################
+# ## 1. Example with two classes from noisy
+# dirichlet mixture angular distribution
 
 
-#
-# 2. Example with two classes from noisy dirichlet mixture angular distribution
-# based on gen_rv_dirimix
-
-# class 0: dirichlet parameters
-Mu0 = np.array([[0.2, 0.7], [0.8, 0.3]])  # Means of the two components
-lnu0 = np.log(10) * np.ones(2)  # log(10) for each component
-wei0 = np.array([0.1, 0.9])  # Mixture weights
-
-# Plot the mixture density
-mlx.plot_pdf_dirimix_2D(Mu0, lnu0, wei0)
-
-# same for class 1 but symetric
-# class 1: dirichlet parameters
-Mu1 = np.array([[0.7, 0.2], [0.3, 0.8]])  # Means of the two components
-lnu1 = np.log(10) * np.ones(2)  # log(10) for each component
-wei1 = np.array([0.1, 0.9])  # Mixture weights
-# Plot the mixture density
-mlx.plot_pdf_dirimix_2D(Mu1, lnu1, wei1)
-
-help(mlx.gen_rv_dirimix)
-
-n0 = 10000
-n1 = 10000
-alpha = 2
-
-data0 = mlx.gen_rv_dirimix(n0, alpha, Mu0, wei0, lnu0)
-data1 = mlx.gen_rv_dirimix(n1, alpha, Mu1, wei1, lnu1)
-
-data = np.vstack((data0, data1))
-label = np.vstack((np.zeros(n0).reshape(-1, 1),
-                   np.ones(n1).reshape(-1, 1))).flatten()
+# data generation
+n = 10000
+np.random.seed(2)
+X, y = mlx.gen_classif_data_diriClasses(mu0 = np.array([0.7, 0.3]),
+                                        lnu=np.log(10)*np.ones(2),
+                                        index_weight_noise=1, size=n)
 # Visualization of the generated data
-colors = np.where(label == 1, 'red', 'blue').flatten()
-plt.scatter(data[:, 0], data[:, 1], c=colors, alpha=0.7)
+colors = np.where( y  == 1, 'red', 'blue').flatten()
+plt.scatter(X[:, 0], X[:, 1], c=colors, alpha=0.5)
 plt.show()
 
-# Splitting the data into training and test sets
-split = 0.2
-X_train, X_test, y_train, y_test = train_test_split(data, label,
-                                                    test_size=split,
-                                                    random_state=42)
-
 # choice of a classification algorithm
 model = RandomForestClassifier()
-
-# Normalization function
-norm_func = lambda x: np.linalg.norm(x, ord=2, axis=1)
-
 # Classifier class initialization
-classifier = mlx.Classifier(model, norm_func,k=200)
+classifier = mlx.Classifier(model, norm_func)
+
+# Threshold choices
+# (to choose training threshold, cross-validation is done in Section 3 below)
+ratio_ext_pred = 0.05  # prediction threshold: upper quantile order
+ratio_ext_train=0.2    # training threshold: upper quantile order
+radii = norm_func(X)
+thresh_predict = np.quantile(radii, 1-ratio_ext_pred)
+k_train = int(n * ratio_ext_train)
+
+
+# Splitting the data into training and test sets
+split = 0.3
+X_train, X_test, y_train, y_test = train_test_split(X,  y,
+                                                    test_size=split,
+                                                    random_state=42)
 
 # Model training
-threshold, X_train_extrem = classifier.fit(X_train,  y_train)
+threshold, ratio, X_train_extreme = classifier.fit(X_train, y_train, k=500)
 
 # Prediction on the test data
-y_pred_extrem,  X_test_extrem, mask_test = classifier.predict(X_test, threshold)
+y_pred_extreme,  X_test_extreme, mask_test = classifier.predict(
+                                            X_test, thresh_predict)
 
 # Accuracy evaluation
-y_test_extrem = y_test[mask_test]
-accuracy = accuracy_score(y_test_extrem, y_pred_extrem)
+y_test_extreme = y_test[mask_test]
+accuracy = accuracy_score(y_test_extreme, y_pred_extreme)
 print(f'Accuracy: {accuracy:.4f}')
+hamming = hamming_loss(y_test_extreme, y_pred_extreme)
+print(f'0-1 loss: {hamming:.4f}')
 
 # Display classification results
-classifier.plot_classif(X_test_extrem, y_test_extrem, y_pred_extrem)
-X_test_extrem_unit = X_test_extrem / norm_func(X_test_extrem)[:, np.newaxis]
-classifier.plot_classif(X_test_extrem_unit, y_test_extrem, y_pred_extrem)
 
-#
-# 3. same example with non standard input (coordinates of X may have different
-#    regular variation indices, or even not be regularly varying at all 
-# class 0: dirichlet parameters
-Mu0 = np.array([[0.2, 0.7], [0.8, 0.3]])  # Means of the two components
-lnu0 = np.log(10) * np.ones(2)  # log(10) for each component
-wei0 = np.array([0.1, 0.9])  # Mixture weights
-# same for class 1 but symetric
-# class 1: dirichlet parameters
-Mu1 = np.array([[0.7, 0.2], [0.3, 0.8]])  # Means of the two components
-lnu1 = np.log(10) * np.ones(2)  # log(10) for each component
-wei1 = np.array([0.1, 0.9])  # Mixture weights
-# generating samples 
-n0 = 10000
-n1 = 10000
-alpha = 2
-data0 = mlx.gen_rv_dirimix(n0, alpha, Mu0, wei0, lnu0)
-data1 = mlx.gen_rv_dirimix(n1, alpha, Mu1, wei1, lnu1)
-data = np.vstack((data0, data1))
-label = np.vstack((np.zeros(n0).reshape(-1, 1),
-                   np.ones(n1).reshape(-1, 1))).flatten()
+classifier.plot_classif(X_test_extreme, y_test_extreme, y_pred_extreme)
+X_test_extrem_unit = X_test_extreme / norm_func(X_test_extreme)[:, np.newaxis]
+classifier.plot_classif(X_test_extrem_unit, y_test_extreme, y_pred_extreme)
 
+# #################################################################
+# ## 2. Same example with non standard input
+# (coordinates of X may have different regular variation indices,
+# or even not be regularly varying at all)
+# 
 
-data_transf = np.copy(data)
-data_transf[:,0] = np.log(data[:,0])
+# transform one component of X: X_raw is not jointly regularly varying.
+X_raw = np.copy(X)
+X_raw[:, 0] = np.log(1 + X[:, 0])
+colors = np.where( y  == 1, 'red', 'blue')
+plt.figure()
+plt.scatter(X_raw[:, 0], X_raw[:, 1], c=colors, alpha=0.7)
+plt.show()
+# choice of a classification algorithm
+model = RandomForestClassifier()
+# Classifier class initialization
+classifier = mlx.Classifier(model, norm_func)
+
+# set thresh_predict relative to rank-standardized  data
+std_X = mlx.rank_transform(X_raw)
+ratio_ext_pred = 0.05  # prediction threshold: upper quantile order
+ratio_ext_train=0.2    # training threshold: upper quantile order
+radii = norm_func(std_X)
+thresh_predict = np.quantile(radii, 1-ratio_ext_pred)
+k_train = int(n * ratio_ext_train)
+
 
 # Splitting the data into training and test sets
-split = 0.2
-X_train, X_test, y_train, y_test = train_test_split(data_transf, label,
+split = 0.3
+X_train, X_test, y_train, y_test = train_test_split(X_raw,  y,
                                                     test_size=split,
                                                     random_state=42)
 
-# transform the training input into unit hPareto margins 
+# transform the training input into unit Pareto margins
 std_X_train = mlx.rank_transform(X_train)
-# learn the rank transformation on X_train and apply it to X_test 
-std_X_test = mlx.rank_transform_test(x_train = X_train, x_test = X_test)
+# learn the rank transformation on X_train and apply it to X_test
+std_X_test = mlx.rank_transform_test(x_train=X_train, x_test=X_test)
 
-# choice of a classification algorithm
-model = RandomForestClassifier()
 
-# Normalization function
-norm_func = lambda x: np.linalg.norm(x, ord=2, axis=1)
+# Model training on standardized data
+threshold, ratio, _ = classifier.fit(std_X_train, y_train, k=500)
 
-# Classifier class initialization
-classifier = mlx.Classifier(model, norm_func, k = 200)
-
-# Model training 
-threshold, X_train_extrem = classifier.fit(std_X_train, y_train)
-
-# Prediction on the test data
-y_pred_extrem,  X_test_extrem, mask_test = classifier.predict(
-    std_X_test, threshold)
+# Prediction on the standardized test data
+y_pred_extreme,  std_X_test_extreme, mask_test = classifier.predict(
+                                            std_X_test, thresh_predict)
 
 # Accuracy evaluation
-y_test_extrem = y_test[mask_test]
-accuracy = accuracy_score(y_test_extrem, y_pred_extrem)
+y_test_extreme = y_test[mask_test]
+accuracy = accuracy_score(y_test_extreme, y_pred_extreme)
 print(f'Accuracy: {accuracy:.4f}')
+hamming = hamming_loss(y_test_extreme, y_pred_extreme)
+print(f'0-1 loss: {hamming:.4f}')
+# performance similar to case 1. Rank-transformation does not significantly
+# alter the results. 
 
-# Display classification results
-classifier.plot_classif(X_test_extrem, y_test_extrem, y_pred_extrem)
-X_test_extrem_unit = X_test_extrem / norm_func(X_test_extrem)[:, np.newaxis]
-classifier.plot_classif(X_test_extrem_unit, y_test_extrem, y_pred_extrem)
+
+# Display classification results  in the pareto (rank-transformed) scale
+classifier.plot_classif(std_X_test_extreme, y_test_extreme, y_pred_extreme)
+X_test_extrem_unit = std_X_test_extreme / \
+                    norm_func(std_X_test_extreme)[:, np.newaxis]
+classifier.plot_classif(X_test_extrem_unit, y_test_extreme, y_pred_extreme)
+
+
+# Display classification results  in the original scale
+classifier.plot_classif(X_test[mask_test], y_test_extreme, y_pred_extreme)
+
+
+# #####################################################################
+# ## 3. Cross-validation for
+#    - Evaluationg model performance on extremes 
+#    - choice of k (at training step)
+# following Aghbalou et al's CV scheme (K-fold)
+
+
+# #############################################
+#  ### 3.a goal: choosing a classification model
+
+# Generate data
+n=20000
+np.random.seed(1)
+X, y = mlx.gen_classif_data_diriClasses(mu0 = np.array([0.7, 0.3]),
+                                               lnu=np.log(10)*np.ones(2),
+                                               index_weight_noise=1, size=n)
+# Visualization of the generated data
+colors = np.where( y  == 1, 'red', 'blue').flatten()
+plt.scatter(X[:, 0], X[:, 1], c=colors, alpha=0.5)
+plt.show()
+
+
+# choice of  2 classification algorithm
+model1 = RandomForestClassifier()
+model2 = GradientBoostingClassifier()
+
+# Classifier class initialization
+classifier1 = mlx.Classifier(model1, norm_func)
+classifier2 = mlx.Classifier(model2, norm_func)
+
+# threshold setting: prediction threshold larger than training threshold
+Norm_X = norm_func(X)
+n = len(Norm_X)
+ratio_train = 0.1
+ratio_test = 0.005
+k_train = int(n * ratio_train)
+thresh_predict = np.quantile(Norm_X, 1 - ratio_test)
+
+#  Perform cross-validation (may be time consuming) for fixed k_train
+#  to compare the two models 
+mean_scores1, sd_mean_scores1, scores1 = classifier1.cross_validate(
+    X, y, k=k_train, thresh_predict=thresh_predict, random_state=42)
+
+mean_scores2, sd_mean_scores2, scores2 = classifier2.cross_validate(
+    X, y, k=k_train, thresh_predict=thresh_predict, random_state=42)
+
+print(f"hamming_loss1 (std): {mean_scores1}  ({sd_mean_scores1})")
+print(f"hamming_loss2 (std): {mean_scores2}  ({sd_mean_scores2})")
+
+plt.boxplot([scores1, scores2], tick_labels=['Scores 1', 'Scores 2'],
+            patch_artist=True,
+            boxprops=dict(facecolor='lightblue', color='blue'),
+            medianprops=dict(color='red'))
+plt.xlabel('Dataset')
+plt.ylabel('Scores')
+plt.title('Comparison of Scores 1 (rf)  and Scores 2 (gb)')
+plt.show()
+# gb seems to perform better .on this example
+
+# #############################################################
+# ### 3.b goal:  choosing the training threshold.
+#         (designed for a fixed prediction threshold)
+# ##############################################################
+
+# in view of 3.a, we choose model2 (gb). 
+classifier = mlx.Classifier(model2, norm_func)
+
+# choose a range of training k's and reset the prediction threshold
+n = len(Norm_X)
+ratio_train = np.linspace(0.01, 0.3, num=15)
+ratio_test = 0.005
+k_train = (n * ratio_train).astype(int)
+thresh_predict = np.quantile(Norm_X, 1-ratio_test)
+
+# compute cv scores for each value of k_train
+kscores = []
+kscores_sd = []
+# !time consuming
+for k in k_train:
+    mean_scores, sd_mean_scores, _ = classifier.cross_validate(
+        X, y, k=k, thresh_predict=thresh_predict,
+        scoring=hamming_loss,
+        random_state=42 + 103*k)
+    kscores.append(mean_scores)
+    kscores_sd.append(sd_mean_scores)
+
+kscores = np.array(kscores)
+kscores_sd = np.array(kscores_sd)
+plt.plot(k_train, kscores)
+plt.fill_between(k_train, kscores + 1.64 * kscores_sd,
+                 kscores - 1.64 * kscores_sd, color='blue', alpha=0.2)
+plt.show()
+
+i_opt = np.argmin(kscores)
+k_opt = k_train[i_opt]
+print(f'Optimal k: {k_opt}')
+ratio_opt = k_opt/n
+print(f' optimal training ratio: {ratio_opt}')
+# choice of k around k=2000  looks optimal with gb
+# for predicting above thresh_predict fixed above.
+
