@@ -192,3 +192,304 @@ plt.show()
 # #########################
 # from supervised_classif.py - end
 # #########################
+
+# ############################
+# from prediction_missing_component : begin
+# ##########################
+
+id_extreme_pred = (norm_X >= thresh_predict)
+X_extreme = X[id_extreme_pred, :]
+y1_extreme = y1[id_extreme_pred]
+y2_extreme = y2[id_extreme_pred]
+
+r_ext = norm_X[id_extreme_pred]
+plt.scatter(r_ext, y1_extreme, c='blue', alpha=0.5, label='y1_extreme')
+plt.scatter(r_ext, y2_extreme, c='red', alpha=0.5, label='y2_extreme')
+plt.scatter(r_ext, Z[id_extreme_pred], c='black', alpha=0.5, label='Z_extreme')
+# Add title and legend
+plt.title('Independence of y1/y2/Z (for ||x|| large) versus Radius ||x||')
+plt.legend()
+
+
+test1 = spearmanr(r_ext, y1_extreme)
+test2 = spearmanr(r_ext, y2_extreme)
+print(f'spearman correl test, radius versus y1:\n \
+correl: {test1.statistic} , p-value : {test1.pvalue}')
+print(f'spearman correl  test, radius versus y2: \n \
+correl: {test2.statistic} , p-value : {test2.pvalue}')
+test_naive = spearmanr(r_ext, Z[id_extreme_pred])
+print(f'correl test, radius versus z: \n \
+correl: {test_naive.statistic} , p-value : {test_naive.pvalue}')
+
+def statistic(x, y):
+    return spearmanr(x, y).statistic
+test1_perm = permutation_test(data=[r_ext, y1_extreme], statistic=statistic,
+                              permutation_type='pairings')
+bin_y1 = (y1_extreme > 0.28).astype(int)
+dummy_test1 = permutation_test(data=[r_ext, bin_y1], statistic= statistic,
+                               permutation_type='pairings')
+
+                        
+test2_perm = permutation_test(r_ext, y2_extreme)
+print(f'permutation correl test, radius versus y1:\n \
+correl: {test1.statistic} , p-value : {test1.pvalue}')
+print(f'permutation correl  test, radius versus y2: \n \
+correl: {test2.statistic} , p-value : {test2.pvalue}')
+test_naive_perm = permutation_test(r_ext, Z[id_extreme_pred])
+print(f'permutation correl test, radius versus z: \n \
+correl: {test_naive_perm.statistic} , p-value : {test_naive_perm.pvalue}')
+
+plt.show()
+
+# Conclusion: above the prediction test, pearson correlation test
+# does not detect significant dependence between radius and transformed target.
+# However of course it does so with the original target
+
+# ###############################
+# independence test k/target:
+
+#    pvalue : str, optional
+        # 'asymptotic' or 'permutation'. Default is 'asymptotic', mainly
+        # because 'permutation' is computationally intensive. 'permutation'
+        # is recommended only for n*ratio_ext < 50.
+
+
+# if (n*np.max(ratio_ext) > 500)  and pvalue == 'permutation':
+#     # Print a warning at the beginning of execution
+#     warnings.warn(
+#         "The permutation test is computationally intensive and may take a \
+#         long time to complete. Consider using  default `pvalue='asymptotic'",
+#         UserWarning
+#     )
+
+# if (n*np.min(ratio_ext) < 500)  and pvalue == 'asymptotic':
+#     # Print a warning at the beginning of execution
+#     warnings.warn(
+#         "The asymptotic p-value may be unreliable for 'ratio_ext * n < 500'.\
+#         Consider using `pvalue='permutation'` ",
+#         UserWarning
+#     )
+# , pvalue='asymptotic'):
+def test_indep_target_radius(X, y, ratio_ext, norm_func):
+    """Performs a Spearman correlation test between y_i's such that ||X_i||
+    exceeds its empirical quantile (1-ratio_ext).
+
+    This test helps determine whether the regular variation assumptions for
+    the prediction model are satisfied, for ratio_ext sufficiently small.
+    When training a prediction model on extreme covariates (classification
+    or regression), it is recommended to perform this independence test for
+    ratio_ext=k_train, where k_train is the number of extremes used to train
+    the prediction model.
+
+    Parameters
+    ----------
+    X : ndarray, shape (n, p)
+        Covariates.
+    y : 1D array, shape (n,)
+        Targets.
+    norm_func : callable
+        The norm functional to measure extremality of samples in X.
+    ratio_ext : 1D array, size m
+        The ratio of (extreme) observations considered for the test.
+    
+    Returns
+    -------
+    A dictionary with entries: 
+        statistics : ndarray
+            The test statistics for each ratio in ratio_ext.
+        pvalues : ndarray
+            The p-values for each ratio in ratio_ext.
+        upper_accept, lower_accept: ndarrays:
+            upper and lower bounds delimitating the  'accept' region
+            (at confidence level 0.95) around zero for each ratio in ratio_ext.
+
+    Details
+    _______________
+    The upper and low boundaries of the non-rejection regions are computed
+    using the Fisher transform method for n*ratio_ext >= 30.
+    If n*ratio_ext < 30 a permutation method is used instead, see
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html.
+
+    """
+    if isinstance(ratio_ext, float):
+        ratio_ext = [ratio_ext]
+    statistics = []
+    pvalues = []
+    lower_accept = []
+    upper_accept = []
+    norm_X = norm_func(X)
+
+    def statistic(a, b):
+        return stats.spearmanr(a, b).statistic
+
+    for ratio in ratio_ext:
+        threshold = np.quantile(norm_X, 1-ratio)
+        id_extreme = (norm_X >= threshold)
+        y_extreme = y[id_extreme]
+        r_ext = norm_X[id_extreme]
+        if len(y_extreme) < 30:   # pvalue == 'permutation':
+            test = stats.permutation_test(data=[r_ext, y_extreme],
+                                          statistic=statistic,
+                                          permutation_type='pairings')
+            upp = np.quantile(test.null_distribution, 0.975)
+            low = np.quantile(test.null_distribution, 0.025)
+            upper_accept.append(upp)
+            lower_accept.append(low)
+        else:
+            test = stats.spearmanr(r_ext, y_extreme)
+            halfw = 1.96 * np.sqrt(1.06 / (len(y_extreme) - 3))
+            lower_accept.append(-halfw)
+            upper_accept.append(halfw)
+
+        statistics.append(round_signif(test.statistic, 2))
+        pvalues.append(round_signif(test.pvalue, 2))
+
+    print(f'spearman statistics: {statistics}')
+    print(f'spearman p-values: {pvalues}')
+    return {
+        'ratio_ext': ratio_ext,
+        'n': len(norm_X),
+        'statistics': np.array(statistics),
+        'pvalues': np.array(pvalues),
+        'lower_accept': np.array(lower_accept),
+        'upper_accept': np.array(upper_accept)
+        }
+
+
+def plot_indep_target_radius(test_indep):
+    """
+    test_indep is a dictionary returned by `test_indep_target_radius`
+    """
+    statistics = test_indep['statistics']
+    lower = test_indep['lower_accept']
+    upper = test_indep['upper_accept']
+    ratios = test_indep['ratio_ext']
+    n  = test_indep['n']  
+    kk = (ratios * n).astype(int)
+    fig, ax = plt.subplots()
+    ax.fill_between(kk, lower, upper, color='green', alpha=0.5,
+                    label='non-rejection region')
+    #colors = ['green' if p > 0.05 else 'red' for p in pvalues1]
+    ax.scatter(kk, statistics, c='black', label='Spearman statistic')
+    # Add a secondary x-axis with a different scale
+    def ratio_transform(x):
+        return x / n
+
+    def inverse_ratio_transform(x):
+        return x * n
+    
+    secax = ax.secondary_xaxis('top',
+                               functions=(ratio_transform,
+                                          inverse_ratio_transform))
+    secax.set_xlabel('Ratio (k / n)')
+    ax.set_title('Spearman correlation test for extreme norm(X) Values vs Target')
+    ax.set_xlabel('k')
+    ax.set_ylabel('Spearman Statistic')
+    ax.legend()
+    plt.grid()
+    plt.show()
+
+
+
+# ######################
+# from supervised_regression : cv on rank transform
+# %%
+# CV on rank transformed?
+
+# %%
+ratio_train_vect = np.geomspace(0.005, 0.2, num=10)
+k_train_vect = (n_train * ratio_train_vect).astype(int)
+thresh_train_vect = np.array([np.quantile(norm_X_train, 1 - r)
+                              for r in ratio_train_vect])
+regressor = mlx.Regressor(model, norm_func)
+kscores = []
+kscores_sd = []
+count = 1
+# cv-loop (time consuming)
+for thresh in thresh_train_vect:
+    count+=1
+    mean_scores, sd_mean_scores, _ = regressor.cross_validate(
+        X_train_rt, y_train, thresh_train=thresh, thresh_predict=thresh_predict,
+        scoring=mean_squared_error,
+        random_state=42 + 103*count)
+    kscores.append(mean_scores)
+    kscores_sd.append(sd_mean_scores)
+
+kscores = np.array(kscores)
+kscores_sd = np.array(kscores_sd)
+plt.plot(k_train_vect, kscores)
+plt.fill_between(k_train_vect, kscores + 1.64 * kscores_sd,
+                 kscores - 1.64 * kscores_sd, color='blue', alpha=0.2)
+plt.show()
+
+# %%
+i_opt = np.argmin(kscores)
+k_opt_rt = k_train_vect[i_opt]
+print(f'optimal k with cv on rank transformed: {k_opt_rt}')
+print(f'recall optimal k with cv, standard case: {k_opt}')
+
+
+# %%
+# Retraining with k_opt_rt
+# Model training
+regressor = mlx.Regressor(model, norm_func)
+threshold, ratio, X_train_extreme = regressor.fit(X_train_rt,  y_train,
+                                                  k=k_opt_rt)
+# Prediction on the test data
+y_pred_extreme_cv_rt,  X_test_extreme_rt, _ = regressor.predict(
+    X_test_rt, thresh_predict)
+
+# mean_squared_error evaluation
+mse_cv_rt = mean_squared_error(y_test_extreme_rt, y_pred_extreme_cv_rt)
+print(f'mse rank-tranformed after cv: {mse_cv_rt:.4f}')
+print(f'mse rank-transfored before cv: {mse_rt:.4f}')
+
+# Not convincing 
+
+
+# ##### from regression.py:
+       
+    # def evaluate(self,y_true, y_pred):
+    #     """
+    #     Evaluate the regression model using Mean Squared Error.
+
+    #     Parameters
+    #     ----------
+    #     y_true : array-like of shape (n_samples,)
+    #         The true values.
+
+    #     y_pred : array-like of shape (n_samples,)
+    #         The predicted values.
+
+    #     Returns
+    #     -------
+    #     mse : float
+    #         The mean squared error of the predictions.
+    #     """
+    #     return mean_squared_error(y_true, y_pred)
+
+    # def cross_validate(self, X, y, cv=5, scoring='neg_mean_squared_error'):
+    #     """
+    #     Perform cross-validation and return the mean score.
+
+    #     Parameters
+    #     ----------
+    #     X : array-like of shape (n_samples, n_features)
+    #         The input samples.
+
+    #     y : array-like of shape (n_samples,)
+    #         The target values.
+
+    #     cv : int, optional
+    #         The number of folds for K-fold cross-validation.
+
+    #     scoring : str, optional
+    #         The scoring metric for cross-validation.
+
+    #     Returns
+    #     -------
+    #     mean_score : float
+    #         The mean score from cross-validation.
+    #     """
+    #     scores = cross_val_score(self.model, X, y, cv=cv, scoring=scoring)
+    #     return np.mean(scores)

@@ -1,8 +1,63 @@
 import numpy as np
 from scipy.special import loggamma  # gamma, betaln
-#import scipy.stats as stat
 import matplotlib.pyplot as plt
 
+
+def round_signif(numbers, digits):
+    """
+    Round each number in a list, NumPy array, or a single float to a specified
+    number of significant digits.
+
+    Parameters
+    ----------
+    numbers : float, list, or np.ndarray
+        The number, list, or array of numbers to round.
+    digits : int
+        The number of significant digits to round to.
+
+    Returns
+    -------
+    float, list, or np.ndarray
+        The rounded numbers in the same format as the input.
+
+    Example usage
+    ------------
+
+    statistics_array = np.array([0.12345, 6.789, 0.00567])
+    statistics_list = [0.12345, 6.789, 0.00567]
+    single_float = 0.12345
+    
+    # Round each element to two significant digits
+    rounded_statistics_array = round_signif(statistics_array, 2)
+    rounded_statistics_list = round_signif(statistics_list, 2)
+    rounded_single_float = round_signif(single_float, 2)
+    
+    # Print the rounded statistics
+    print(f' statistics (array): {rounded_statistics_array}')
+    print(f' statistics (list): {rounded_statistics_list}')
+    print(f'Single float: {rounded_single_float}')
+    """
+    if isinstance(numbers, float):
+        # Round a single float
+        return float(round(numbers, digits - \
+                           int(np.floor(np.log10(abs(numbers)))) - 1)) if \
+                           numbers != 0 else 0.0
+    elif isinstance(numbers, np.ndarray):
+        # Apply rounding element-wise and return as a NumPy array
+        return np.array([float(round(num, digits - \
+                                     int(np.floor(np.log10(abs(num)))) - 1)) if \
+                         num != 0 else 0.0 for num in numbers])
+    elif isinstance(numbers, list):
+        # Apply rounding element-wise and return as a list
+        return [float(round(num, digits - \
+                            int(np.floor(np.log10(abs(num)))) - 1)) if\
+                num != 0 else 0.0 for num in numbers]
+    else:
+        raise TypeError("Input must be a float, list, or NumPy array of floats.")
+
+
+
+    
 def hill_estimator(x, k):
     """
     Hill estimator for the tail index based on thee data x, using the
@@ -361,7 +416,7 @@ def plot_pdf_dirimix_3D(Mu,  wei, lnu,  n_points=500):
     X1 = X1.flatten()
     X2 = X2.flatten()
 
-    valid_points = X1 + X2 <= 1
+    valid_points = X1 + X2 <= 1-10**(-5)
     X1 = X1[valid_points]
     X2 = X2[valid_points]
     X_full = np.column_stack((X1, X2, 1 - X1 - X2))
@@ -432,3 +487,136 @@ def gen_multilog(dim, alpha, size=1):
     for ii in range(dim):
         Result[:, ii] = (S / W[:, ii]) ** alpha
     return Result
+
+
+def transform_target_lin(y, X, norm_func):
+    """
+    Transform the target vector to achieve approximate independence from the
+    norm of X.
+
+    This function rescales the original target vector `y` into
+    `y' = y / ||X||` to mitigate the influence of the magnitude of `X` on `y`,
+    particularly when `||X||` is large. This transformation is useful for
+    predicting missing components in heavy-tailed multivariate data.
+
+    Parameters:
+    - y (array-like): The original target vector to be transformed.
+    - X (array-like): The matrix whose norm is used to rescale `y`.
+    - norm_func (callable): A function that computes the norm of `X`.
+
+    Returns:
+    - y1 (array-like): The rescaled target vector.
+    """
+    norm_X = norm_func(X)
+    y1 = y / norm_X
+    return y1
+
+
+def inv_transform_target_lin(y, X, norm_func):
+    """
+    Inverse transform the rescaled target vector to its original scale.
+
+    This function performs the inverse operation of `transform_target_lin`,
+    converting the rescaled target vector back to its original scale by
+    multiplying it by the norm of `X`.
+
+    Parameters:
+    - y (array-like): The rescaled target vector to be inverse-transformed.
+    - X (array-like): The matrix whose norm was used to rescale `y`.
+    - norm_func (callable): The same norm function used in
+                            `transform_target_lin`.
+
+    Returns:
+    - y_orig (array-like): The original target vector.
+    """
+    norm_X = norm_func(X)
+    y_orig = y * norm_X
+    return y_orig
+
+
+def transform_target_nonlin(y, X, norm_order):
+    q = norm_order
+    joint = np.hstack((X, y.reshape(-1, 1)))
+    norm_full = np.linalg.norm(joint, ord=q, axis=1)
+    return y / norm_full
+
+
+def inv_transform_target_nonlin(y, X, norm_order):
+    q = norm_order
+    norm_x = np.linalg.norm(X, ord=q, axis=1)
+    predicted_x = y/(1-y**q)**(1/q) * norm_x
+    return predicted_x
+
+# %% 
+def test_indep_radius_rest(X, y, ratio_ext, norm_func, random_state=1):
+    from dcor.independence import distance_covariance_test
+    from dcor.independence import distance_correlation_t_test
+
+    # 
+    if isinstance(ratio_ext, float):
+        ratio_ext = [ratio_ext]
+    norm_X = norm_func(X)
+    Theta = X/norm_X.reshape(-1,1)
+    if y is  None:
+        Z = Theta
+    else:
+        Z = np.column_stack((Theta,y.reshape(-1,1)))
+    pvalues = []
+    count = 0
+    for ratio in ratio_ext:
+        count +=173
+        threshold = np.quantile(norm_X, 1-ratio)
+        id_extreme = (norm_X >= threshold)
+        r_ext = norm_X[id_extreme]
+        Z_ext = Z[id_extreme, :]
+        if len(r_ext) < 100:
+            # perform a distance covariance test with permutation-based
+            # computation of the p-value
+            test = distance_covariance_test(
+                x=Z_ext,
+                y=np.log(1+r_ext).reshape(-1, 1),
+                num_resamples=500,
+                random_state=random_state + count,
+            )
+        else:
+            # perform a distance covariance test with asymptotic p-value
+            test = distance_correlation_t_test(
+                x=Z_ext,
+                y=np.log(1+r_ext).reshape(-1, 1)
+                )
+
+        pvalues.append(test.pvalue)
+        
+    pvalues = np.array(pvalues)    
+    i_max = np.max(np.where(pvalues > 0.05)[0])
+    ratio_max = ratio_ext[i_max]
+    return pvalues, ratio_max 
+
+
+def plot_indep_radius_rest(pvalues, ratio_ext, ratio_max, n):
+    kk = (ratio_ext * n).astype(int)
+    k_max = int(ratio_max * n)
+    fig, ax = plt.subplots()
+#    colors = ['green' if p > 0.05 else 'red' for p in pvalues]
+    ax.scatter(kk, pvalues, c='black', label='distance correlation pvalues')
+    ax.plot(k_max*np.ones(2), np.linspace(0, np.max(pvalues), num=2),
+            c='red',
+            label="selected k with distance covariance rule-of-thumb")
+    # Add a secondary x-axis with a different scale
+    def ratio_transform(x):
+        return x / n
+
+    def inverse_ratio_transform(x):
+        return x * n
+    
+    secax = ax.secondary_xaxis('top',
+                               functions=(ratio_transform,
+                                          inverse_ratio_transform))
+    secax.set_xlabel('Ratio (k / n)')
+    ax.set_title('distance correlation test for extreme norm(X) Values vs Rest')
+    ax.set_xlabel('k')
+    ax.set_ylabel('p-value')
+    ax.legend()
+    plt.grid()
+    plt.show()
+

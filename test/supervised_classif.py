@@ -1,245 +1,477 @@
+# %% [markdown]
 # # Tutorial notebook for classification on extreme covariates
 
-# import os
-# os.getcwd()
+# %% [markdown]
+"""
+Implements and illustrates the methodology and theory developed in
+
+    *  Jalalzai, H., Clémençon, S., & Sabourin, A. (2018). On binary classification in extreme regions. Advances in Neural Information Processing Systems, 31.
+
+    * Clémençon, S., Jalalzai, H., Lhaut, S., Sabourin, A., & Segers, J. (2023). Concentration bounds for the empirical angular measure with statistical learning applications. Bernoulli, 29(4), 2797-2827.
+
+    * Aghbalou, A., Bertail, P., Portier, F., & Sabourin, A. (2024). Cross-validation on extreme regions. Extremes, 27(4), 505-555.
+"""
+
+# %% [markdown]
+# ## Table of Contents
+# * [Preliminary manipulations](#Preliminary)
+# * [Data generation](#Data_generation)
+# * [Choice of k, Episode 1.](#Choice_k_1)
+# * [Learning, prediction, evaluation](#Learning)
+# * [Choice of k: Episode 2, cross-validation](#Choice_k_2)
+# * [Conclusion: comparison](#conclusion)
+# * [Nonstandard covariates: rank-transformation ](#nonstandard)
+
+
+# %% [markdown]
+# ## Preliminary manipulations <a class="anchor" id="Preliminary"></a>
+
+
+# %%
+# Set working directory if necessary
+import os
+os.getcwd()
 # os.chdir("../")
-# os.getcwd()
+
+
+# %% [markdown]
+# Imports
+
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import hamming_loss
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.linear_model import Perceptron, LogisticRegression
+from copy import deepcopy
+# from sklearn.ensemble import RandomForestClassifier
+# from sklearn.ensemble import GradientBoostingClassifier
 import MLExtreme as mlx
 
-# ###################################################
-# Norm function: L2 norm. change `ord` to 1 or inf for variants 
+
+# %% [markdown]
+"""
+Choose a norm function according to which 'extreme' covariates will be
+selected
+"""
+
+# %%
 def norm_func(x):
     return np.linalg.norm(x, ord=2, axis=1)
 
 
-# ####################################################
-# ## 1. Example with two classes from noisy
-# dirichlet mixture angular distribution
+# %% [markdown]
+# ## Data generation <a id="Data_generation"></a>
 
+# %% [markdown]
+"""
+ ** Generative Model Overview **
 
+In this toy example, each class (conditioned on $ y = 1 $ or $  y = 0 $) follows a heavy-tailed, regularly varying bivariate distribution. The tail angular measure differs from the bulk angular distribution, requiring a bias-variance trade-off when setting the training radial threshold. This threshold determines which samples are considered 'extreme', crucial for optimizing model performance in the covariates' tail.
+
+**N.B**:  The assumptions of Jalalzai et al. (2018) are satisfied in the first part of the tutorial. In a second step we consider a setting where a  marginal transformation of the covariates is necessary, and we use the rank-transformatoin considered in Clémençon et al (2023). 
+"""
+# %%
 # data generation
-n = 10000
-np.random.seed(2)
-X, y = mlx.gen_classif_data_diriClasses(mu0 = np.array([0.7, 0.3]),
-                                        lnu=np.log(10)*np.ones(2),
-                                        index_weight_noise=1, size=n)
-# Visualization of the generated data
-colors = np.where( y  == 1, 'red', 'blue').flatten()
-plt.scatter(X[:, 0], X[:, 1], c=colors, alpha=0.5)
-plt.show()
+n = 40000
+Dim = 10
+alpha = 2 # regular variation index of the covariate
+np.random.seed(1)
+X, y = mlx.gen_classif_data_diriClasses(mu0=np.linspace(0.2, 0.8, num=Dim),
+                                        lnu=np.log(10)*np.ones(Dim),
+                                        alpha=alpha,
+                                        index_weight_noise=alpha, size=n)
+# more details: 
+# help(mlx.gen_classif_data_diriClasses)
 
-# choice of a classification algorithm
-model = RandomForestClassifier()
-# Classifier class initialization
-classifier = mlx.Classifier(model, norm_func)
+# %%
+# Choose if you wish to show graphical vizualisations of the outputs
+# NB: plots are designed for the case Dim=2, interprete with care the graphical results for Dim >2
+showPlots = True
 
-# Threshold choices
-# (to choose training threshold, cross-validation is done in Section 3 below)
-ratio_ext_pred = 0.05  # prediction threshold: upper quantile order
-ratio_ext_train=0.2    # training threshold: upper quantile order
-radii = norm_func(X)
-thresh_predict = np.quantile(radii, 1-ratio_ext_pred)
-k_train = int(n * ratio_ext_train)
+# %%
+# Visualization of the generated data when Dim==2
+# (with rescaled covariates for easier visualization)
+if showPlots:  ## Dim ==2:
+    colors = np.where(y == 1, 'red', 'blue').flatten()
+    plt.scatter(X[:, 0]**(alpha/4), X[:, -1]**(alpha/4), c=colors, alpha=0.5)
+    plt.show()
+# scissors-shaped pattern
 
-
+# %%
 # Splitting the data into training and test sets
-split = 0.3
-X_train, X_test, y_train, y_test = train_test_split(X,  y,
+# test_size: simulated data : may be set arbitrarily large upon increasing n
+split = 3/4  
+n_train = n * (1-split)
+# n_test = n * split 
+X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     test_size=split,
                                                     random_state=42)
 
-# Model training
-threshold, ratio, X_train_extreme = classifier.fit(X_train, y_train, k=500)
+# %% [markdown]
+# ## Choice of k, Episode 1. <a class="anchor" id="Choice_k_1"></a>
 
-# Prediction on the test data
+# %% [markdown]
+"""
+(For adaptive choice of k_train by cross-validation, see Episode 2 below)
+
+To choose `k_train' the number of extreme training samples at the training step,
+we suggest the following rule of thumb:
+
+Select k_train as the largest k such that a distance covariance test [1] cannot reject the null hypothesis that the radius is independent from the pair (Angle, covariate). For small values of k, the p-value is computed by a permutation test, as justified in spirit in [2].  To avoid instabilities due to lack of moments of the radial variable, a log-transformation is applied.
+
+Computation of the test statistics and p-values relies on the `dcor' package
+https://dcor.readthedocs.io/en/stable/installation.html
+
+Assuming `k_train` is correctly chosen,  theoretical guarantees at the
+prediction test  cover in principle any `thresh_predict` such that:
+
+` thresh_predict > np.quantiles(norm_func(X_test), 1 -  k_train/n_train) `
+
+References
+---------
+
+[1] Székely, G. J., Rizzo, M. L., & Bakirov, N. K. (2007). Measuring and testing dependence by correlation of distances.
+
+[2] Wan, P., & Davis, R. A. (2019). Threshold selection for multivariate heavy-tailed data. Extremes, 22(1), 131-166.
+"""
+
+# %%
+ratios = np.linspace(50/n_train, 0.15, num=30)
+pvalues, ratio_max = mlx.test_indep_radius_rest(X_train, y_train, ratios,
+                                                norm_func)
+
+k_max = int(ratio_max * n_train)
+
+# %%
+# Plot the pvalues of the independence tests, and print k_max
+if showPlots:
+    mlx.plot_indep_radius_rest(pvalues, ratios, ratio_max, n_train)
+
+print(f'rule-of-thumb maximum admissible k (k_max): {k_max}' )
+print(f'rule-of-thumb maximum admissible ratio of extremes  (ratio_max): \
+ {mlx.round_signif(ratio_max, 2)}')
+
+# %%
+# Set training and prediction ratios accordingly:
+ratio_train = ratio_max * 4/5
+ratio_test = ratio_max / 2  # higher quantile than training quantile: 
+norm_X_train = norm_func(X_train)
+thresh_predict = np.quantile(norm_X_train, 1-ratio_test)
+thresh_train = np.quantile(norm_X_train, 1-ratio_test)
+k_train = int(ratio_train * n_train)
+print(f'rule-of-thumb k_train: {k_train}')
+
+# %% [markdown]
+# ## Learning, prediction, evaluation <a class="anchor" id="Learning"></a>
+
+# %% [markdown]
+# Choice of an off-the-shelf classification algorithm
+# see https://scikit-learn.org/stable/supervised_learning.html
+
+# %%
+# Pick a classification model in sklearn, previously imported
+model = Perceptron()   # RandomForestClassifier()
+task = 'classification'
+# Classifier class initialization
+classifier = mlx.xcovPredictor(task, model, norm_func)
+naive = deepcopy(model)
+# Model training
+threshold, ratio, X_train_extreme = classifier.fit(X_train, y_train, k_train)
+naive.fit(X_train, y_train)
+
+# Prediction on the test data above a larger threshold (extrapolation)
 y_pred_extreme,  X_test_extreme, mask_test = classifier.predict(
                                             X_test, thresh_predict)
 
-# Accuracy evaluation
+y_pred_naive = naive.predict(X_test)
+y_pred_naive_extreme = y_pred_naive[mask_test]
+
+# Performance  evaluation: Hamming loss (=0-1 loss)
 y_test_extreme = y_test[mask_test]
-accuracy = accuracy_score(y_test_extreme, y_pred_extreme)
-print(f'Accuracy: {accuracy:.4f}')
 hamming = hamming_loss(y_test_extreme, y_pred_extreme)
-print(f'0-1 loss: {hamming:.4f}')
+hamming_stdev = np.sqrt(hamming * (1-hamming)) / np.sqrt(len(y_test_extreme))
+hamming_naive = hamming_loss(y_test_extreme, y_pred_naive_extreme)
+hamming_naive_stdev = np.sqrt(hamming_naive * (1-hamming_naive)) / \
+    np.sqrt(len(y_test_extreme))
 
-# Display classification results
+print(f'0-1 loss MLX model (stdev):  {mlx.round_signif(hamming, 2)} \
+({mlx.round_signif(hamming_stdev, 2)})')
+print(f'0-1 loss naive model (stdev): {mlx.round_signif(hamming_naive, 2)} \
+({mlx.round_signif(hamming_naive_stdev, 2)})')
 
-classifier.plot_classif(X_test_extreme, y_test_extreme, y_pred_extreme)
-X_test_extrem_unit = X_test_extreme / norm_func(X_test_extreme)[:, np.newaxis]
-classifier.plot_classif(X_test_extrem_unit, y_test_extreme, y_pred_extreme)
+# %%
+# Display classification results:
+# on the original scale
+if showPlots:
+    # MLX model:
+    mlx.plot_classif(X_test_extreme, y_test_extreme, y_pred_extreme)
 
-# #################################################################
-# ## 2. Same example with non standard input
-# (coordinates of X may have different regular variation indices,
-# or even not be regularly varying at all)
-# 
+    # naive model
+    mlx.plot_classif(X_test_extreme, y_test_extreme, y_pred_naive_extreme)
 
-# transform one component of X: X_raw is not jointly regularly varying.
-X_raw = np.copy(X)
-X_raw[:, 0] = np.log(1 + X[:, 0])
-colors = np.where( y  == 1, 'red', 'blue')
-plt.figure()
-plt.scatter(X_raw[:, 0], X_raw[:, 1], c=colors, alpha=0.7)
-plt.show()
-# choice of a classification algorithm
-model = RandomForestClassifier()
-# Classifier class initialization
-classifier = mlx.Classifier(model, norm_func)
+# %% [markdown]
+# ## Cross-validation for model choice and choice of k <a class="anchor" id="Crossval"></a>
 
-# set thresh_predict relative to rank-standardized  data
-std_X = mlx.rank_transform(X_raw)
-ratio_ext_pred = 0.05  # prediction threshold: upper quantile order
-ratio_ext_train=0.2    # training threshold: upper quantile order
-radii = norm_func(std_X)
-thresh_predict = np.quantile(radii, 1-ratio_ext_pred)
-k_train = int(n * ratio_ext_train)
+# %% [markdown]
+"""
+Two purposes are envisioned for cross-validation here:
 
+    (a) Evaluating model performance on extremes and choosing a good classification model
 
-# Splitting the data into training and test sets
-split = 0.3
-X_train, X_test, y_train, y_test = train_test_split(X_raw,  y,
-                                                    test_size=split,
-                                                    random_state=42)
+    (b) choice of `k_train`, Episode 2
+"""
 
-# transform the training input into unit Pareto margins
-std_X_train = mlx.rank_transform(X_train)
-# learn the rank transformation on X_train and apply it to X_test
-std_X_test = mlx.rank_transform_test(x_train=X_train, x_test=X_test)
-
-
-# Model training on standardized data
-threshold, ratio, _ = classifier.fit(std_X_train, y_train, k=500)
-
-# Prediction on the standardized test data
-y_pred_extreme,  std_X_test_extreme, mask_test = classifier.predict(
-                                            std_X_test, thresh_predict)
-
-# Accuracy evaluation
-y_test_extreme = y_test[mask_test]
-accuracy = accuracy_score(y_test_extreme, y_pred_extreme)
-print(f'Accuracy: {accuracy:.4f}')
-hamming = hamming_loss(y_test_extreme, y_pred_extreme)
-print(f'0-1 loss: {hamming:.4f}')
-# performance similar to case 1. Rank-transformation does not significantly
-# alter the results. 
-
-
-# Display classification results  in the pareto (rank-transformed) scale
-classifier.plot_classif(std_X_test_extreme, y_test_extreme, y_pred_extreme)
-X_test_extrem_unit = std_X_test_extreme / \
-                    norm_func(std_X_test_extreme)[:, np.newaxis]
-classifier.plot_classif(X_test_extrem_unit, y_test_extreme, y_pred_extreme)
-
-
-# Display classification results  in the original scale
-classifier.plot_classif(X_test[mask_test], y_test_extreme, y_pred_extreme)
-
-
-# #####################################################################
-# ## 3. Cross-validation for
-#    - Evaluationg model performance on extremes 
-#    - choice of k (at training step)
-# following Aghbalou et al's CV scheme (K-fold)
-
-
-# #############################################
+# %% [markdown]
 #  ### 3.a goal: choosing a classification model
 
-# Generate data
-n=20000
-np.random.seed(1)
-X, y = mlx.gen_classif_data_diriClasses(mu0 = np.array([0.7, 0.3]),
-                                               lnu=np.log(10)*np.ones(2),
-                                               index_weight_noise=1, size=n)
-# Visualization of the generated data
-colors = np.where( y  == 1, 'red', 'blue').flatten()
-plt.scatter(X[:, 0], X[:, 1], c=colors, alpha=0.5)
-plt.show()
-
-
+# %%
 # choice of  2 classification algorithm
-model1 = RandomForestClassifier()
-model2 = GradientBoostingClassifier()
-
+model1 = Perceptron() ##RandomForestClassifier()
+model2 = LogisticRegression()  ##GradientBoostingClassifier()
 # Classifier class initialization
-classifier1 = mlx.Classifier(model1, norm_func)
-classifier2 = mlx.Classifier(model2, norm_func)
+classifier1 = mlx.xcovPredictor(task, model1, norm_func)
+classifier2 = mlx.xcovPredictor(task, model2, norm_func)
 
-# threshold setting: prediction threshold larger than training threshold
-Norm_X = norm_func(X)
-n = len(Norm_X)
-ratio_train = 0.1
-ratio_test = 0.005
-k_train = int(n * ratio_train)
-thresh_predict = np.quantile(Norm_X, 1 - ratio_test)
-
-#  Perform cross-validation (may be time consuming) for fixed k_train
+# %%
+#  Perform cross-validation (may be time consuming) for fixed thresh_train
 #  to compare the two models 
 mean_scores1, sd_mean_scores1, scores1 = classifier1.cross_validate(
-    X, y, k=k_train, thresh_predict=thresh_predict, random_state=42)
+    X_train, y_train, thresh_train=thresh_train, thresh_predict=thresh_predict,
+    random_state=42)
 
 mean_scores2, sd_mean_scores2, scores2 = classifier2.cross_validate(
-    X, y, k=k_train, thresh_predict=thresh_predict, random_state=42)
+    X_train, y_train, thresh_train=thresh_train, thresh_predict=thresh_predict,
+    random_state=42)
 
-print(f"hamming_loss1 (std): {mean_scores1}  ({sd_mean_scores1})")
-print(f"hamming_loss2 (std): {mean_scores2}  ({sd_mean_scores2})")
+print(f"hamming_loss1 (error magnitude): {mean_scores1}  ({sd_mean_scores1})")
+print(f"hamming_loss2 (error magnitude): {mean_scores2}  ({sd_mean_scores2})")
 
-plt.boxplot([scores1, scores2], tick_labels=['Scores 1', 'Scores 2'],
-            patch_artist=True,
-            boxprops=dict(facecolor='lightblue', color='blue'),
-            medianprops=dict(color='red'))
-plt.xlabel('Dataset')
-plt.ylabel('Scores')
-plt.title('Comparison of Scores 1 (rf)  and Scores 2 (gb)')
-plt.show()
-# gb seems to perform better .on this example
+# %%
+if showPlots: 
+    plt.boxplot([scores1, scores2], tick_labels=['Scores 1', 'Scores 2'],
+                patch_artist=True,
+                boxprops=dict(facecolor='lightblue', color='blue'),
+                medianprops=dict(color='red'), showmeans=True)
+    plt.xlabel('Dataset')
+    plt.ylabel('Scores')
+    plt.title('CV risks 1 (Perceptron)  2 (Logistic Regression)')
+    plt.grid()
+    plt.show()
 
-# #############################################################
+
+# %% [markdown]
 # ### 3.b goal:  choosing the training threshold.
 #         (designed for a fixed prediction threshold)
-# ##############################################################
+# in view of 3.a, we choose logistic regression as our new model.
 
-# in view of 3.a, we choose model2 (gb). 
-classifier = mlx.Classifier(model2, norm_func)
+# %%
+model = LogisticRegression()
+classifier = mlx.Classifier(model, norm_func)
 
-# choose a range of training k's and reset the prediction threshold
-n = len(Norm_X)
-ratio_train = np.linspace(0.01, 0.3, num=15)
-ratio_test = 0.005
-k_train = (n * ratio_train).astype(int)
-thresh_predict = np.quantile(Norm_X, 1-ratio_test)
+# choose a range of training k's  (thresh_predict is defined above)
+ratio_train_vect = np.linspace(0.005, 0.7, num=15)
+k_train_vect = (n_train * ratio_train_vect).astype(int)
+thresh_train_vect = np.array([np.quantile(norm_X_train, 1 - r)
+                              for r in ratio_train_vect])
 
-# compute cv scores for each value of k_train
+# %%
+# compute cv scores for each value of `thresh_train`
+# NB: setting k in the function leads to misinterpretation REMOVE!!
 kscores = []
 kscores_sd = []
-# !time consuming
-for k in k_train:
+# (time consuming)
+count=1
+for thresh in thresh_train_vect:
+    count+=1
     mean_scores, sd_mean_scores, _ = classifier.cross_validate(
-        X, y, k=k, thresh_predict=thresh_predict,
+        X_train, y_train, thresh_train=thresh, thresh_predict=thresh_predict,
         scoring=hamming_loss,
-        random_state=42 + 103*k)
+        random_state=42 + 103*count)
     kscores.append(mean_scores)
     kscores_sd.append(sd_mean_scores)
 
 kscores = np.array(kscores)
 kscores_sd = np.array(kscores_sd)
-plt.plot(k_train, kscores)
-plt.fill_between(k_train, kscores + 1.64 * kscores_sd,
+plt.plot(k_train_vect, kscores)
+plt.fill_between(k_train_vect, kscores + 1.64 * kscores_sd,
                  kscores - 1.64 * kscores_sd, color='blue', alpha=0.2)
 plt.show()
 
+# %%
 i_opt = np.argmin(kscores)
-k_opt = k_train[i_opt]
-print(f'Optimal k: {k_opt}')
-ratio_opt = k_opt/n
-print(f' optimal training ratio: {ratio_opt}')
-# choice of k around k=2000  looks optimal with gb
+k_opt = k_train_vect[i_opt]
+print(f'Optimal k selected by CV: {k_opt}')
+ratio_opt = ratio_train_vect[i_opt]
+print(f'maximum admissible k with rule-of-thumb: {k_max}')
+print(f' optimal training ratio selected by CV: {ratio_opt}')
+# choice of k around k=1500  lhooks optimal with model 2
 # for predicting above thresh_predict fixed above.
+
+# %%
+# Is model 2 still the best with k_train = k_opt ?
+
+# %%
+# model1 = Perceptron() 
+# model2 = LogisticRegression() 
+# Classifier class initialization
+classifier1 = mlx.Classifier(model1, norm_func)
+classifier2 = mlx.Classifier(model2, norm_func)
+mean_scores1, sd_mean_scores1, scores1 = classifier1.cross_validate(
+    X_train, y_train, k=k_opt, thresh_predict=thresh_predict, random_state=42)
+
+mean_scores2, sd_mean_scores2, scores2 = classifier2.cross_validate(
+    X_train, y_train, k=k_opt, thresh_predict=thresh_predict, random_state=42)
+
+print(f"hamming_loss1 (std): {mean_scores1}  ({sd_mean_scores1})")
+print(f"hamming_loss2 (std): {mean_scores2}  ({sd_mean_scores2})")
+# yes
+
+# %%
+# Retrain Model 2,  with k_train = k_opt and evaluate on test set
+model = LogisticRegression()
+classifier_cv = mlx.Classifier(model, norm_func)
+classifier_cv.fit(X_train,  y_train, k=k_opt)
+# Prediction on the test data
+y_pred_extreme_cv, _ , _ = classifier_cv.predict(
+                                            X_test, thresh_predict)
+
+# For comparison: train classifier2 with rule-of-thumb k_train  and evaluate on test set
+model = LogisticRegression()
+classifier2 = mlx.Classifier(model, norm_func)
+classifier2.fit(X_train,  y_train, k= k_train)
+# Prediction on the test data
+y_pred_extreme2,  _, _= classifier2.predict(X_test, thresh_predict)
+
+# For comparison: naive method (model2) on full dataset and predict on extremes
+naive = LogisticRegression()
+naive.fit(X_train, y_train)
+y_pred_naive = naive.predict(X_test_extreme)
+
+# 0-1 loss  evaluation on extremes
+y_test_extreme = y_test[mask_test]
+hamming_cv = hamming_loss(y_test_extreme, y_pred_extreme_cv)
+hamming_model2_thumb = hamming_loss(y_test_extreme, y_pred_extreme2)
+hamming_naive =  hamming_loss(y_test_extreme, y_pred_naive)
+
+#
+# Results with 0.95 confidence intervals: 
+
+def half_ci(x):
+   return  1.64*np.sqrt( x * (1-x)/ len(y_test_extreme))
+
+print(f'hamming  naive: {hamming_naive:.4f}, \
+({hamming_naive - half_ci(hamming_naive):.4f}, \
+{hamming_naive + half_ci(hamming_naive):.4f})')
+print(f'hamming  model1 before cv: {hamming:.4f}, \
+({hamming - half_ci(hamming):.4f}, {hamming + half_ci(hamming):.4f})')
+print(f'hamming  model2 before  cv: {hamming_model2_thumb:.4f}, \
+({hamming_model2_thumb - half_ci(hamming_model2_thumb):.4f},  \
+{hamming_model2_thumb + half_ci(hamming_model2_thumb):.4f})')
+print(f'hamming  model2 after cv: {hamming_cv:.4f}, \
+({hamming_cv - half_ci(hamming_cv):.4f},  \
+{hamming_cv + half_ci(hamming_cv):.4f})')
+
+
+# %% [markdown]
+# Naive method fails.
+# CV and rule of thumb have similar performance. Model 2 (logistic) slightly outperforms Model 1 (perceptron)
+
+
+
+# %% [markdown]
+# ##  Non-standard input. <a class="anchor" id="nonstandard"></a>
+# 
+# (Coordinates of X may have different regular variation indices,
+# or even not be regularly varying at all).
+# 
+# For pedagogical purpose here we transform one column of X. However the rank
+# transformation used below is insensitive to monotonic transformation so the
+# results would be unchanged without this preliminary transformation.
+
+# %%
+# Arbitrary  (nonlinear) transformation of one component of the input
+# the result in now considered as 'raw data'
+X_raw = np.copy(X)
+X_raw[:, 0] = np.log(1 + X[:, 0])
+colors = np.where(y == 1, 'red', 'blue')
+plt.figure()
+plt.scatter(X_raw[:, 0], X_raw[:, 1], c=colors, alpha=0.7)
+plt.show()
+
+# %%
+# Splitting the raw data into training and test sets
+X_train_raw, X_test_raw, y_train, y_test = train_test_split(X_raw,  y,
+                                                            test_size=split,
+                                                            random_state=42)
+
+# %%
+# rank-transform the training input into unit Pareto margins
+X_train_rt = mlx.rank_transform(X_train_raw)
+# learn the rank transformation on X_train and apply it to X_test
+X_test_rt = mlx.rank_transform_test(x_train=X_train_raw, x_test=X_test_raw)
+
+# %%
+# Rule-of-thumb choice of k
+ratios = np.linspace(50/n_train, 0.2, num=50) 
+pvalues_rt, ratio_max_rt = mlx.test_indep_radius_rest(X_train_rt, y_train,
+                                                      ratios,
+                                                      norm_func) 
+mlx.plot_indep_radius_rest(pvalues_rt, ratios, ratio_max_rt, n_train)
+# k ~ 400 maximum on this example.
+
+# %%
+k_max_rt = int(ratio_max_rt * n_train)
+# new rule-of-thumb k_max_rt: 
+print(k_max_rt, mlx.round_signif(ratio_max_rt, 2))
+# previously (with standdard data): 
+print(k_max, mlx.round_signif(ratio_max, 2))
+
+# %%
+# Set training and predictio ratios accordingly:
+ratio_train = ratio_max_rt * 4/5
+ratio_test = ratio_max_rt / 2  # higher quantile than training quantile: 
+norm_X_train = norm_func(X_train_rt)
+thresh_predict = np.quantile(norm_X_train, 1-ratio_test)
+thresh_train = np.quantile(norm_X_train, 1-ratio_test)
+k_train = int(ratio_train * n_train)
+print(k_train, thresh_train)
+
+# %% [Markdown]
+# ### Learning on transformed inputs
+
+# %%
+# choice of a classification algorithm
+model = model2
+# Classifier class initialization
+classifier = mlx.Classifier(model, norm_func)
+
+# Model training on standardized data
+threshold, ratio, _ = classifier.fit(X_train_rt, y_train, k=500)
+
+# Prediction on the standardized test data
+y_pred_extreme_rt, _ , mask_test_rt = classifier.predict(
+                                            X_test_rt, thresh_predict)
+
+# Accuracy evaluation
+y_test_extreme_rt = y_test[mask_test_rt]
+hamming_rt = hamming_loss(y_test_extreme_rt, y_pred_extreme_rt)
+print(f'0-1 loss (with rank transformation): {hamming_rt:.4f}')
+
+# recall 
+print(f'0-1 loss (without rank transformation): {hamming_model2_thumb:.4f}')
+
+# %% [markdown]
+"""
+Performance similar to case 1. Rank-transformation does not significantly
+alter the results.
+
+**N.B.** The extreme train/test sets obtained with standardized data are a
+priori different from the standard case.   However the proportion of
+disagreements is moderate:
+"""
+# %%
+print(f' proportion of discordant selections of extremes on the test set: \n \
+ {hamming_loss(mask_test, mask_test_rt):4f}')
 

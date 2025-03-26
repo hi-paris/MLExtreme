@@ -1,52 +1,65 @@
 import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.metrics import hamming_loss
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
+from copy import deepcopy
 
-
-
-class Regressor:
+class xcovPredictor:
     """
-    A custom regressor that uses a specified model and a normalization function
-    to predict continuous values.
+    A prediction model (either classification or regression)
+     designed specifically for making predictions on the tails of the
+     covariate distribution.
+    
+     Parameters ---------- task: str The type of prediction task
+     envisioned.  Must be either 'prediction' or 'classification'.
+     
+    model : object The model to be used for prediction. Must have a
+        `.fit` method and a `.predict' method.
 
-    Parameters
-    ----------
-    model : object
-        The model to be used for regression. Must have a `.fit` method.
+    norm_func : callable, optional A function that computes a norm of
+        the input data. Default is L2 norm.
 
-    norm_func : callable, optional
-        A function that computes a norm of the input data. Default is L2 norm.
+     
+    Attributes ---------- task : str The type of prediction task
+    envisioned.  Either 'prediction' or 'classification'.
+        
+    model : object The model used for prediction.  It is a
+        `copy.deepcopy` copy of the argument passed to the contructor.
 
-    Attributes
-    ----------
-    model : object
-        The model used for regression.
+    norm_func : callable The norm function used at training and
+        testing for selecting extremes.
 
-    norm_func : callable
-        The normalization function.
+    thresh_train: float.  Set to None at initialization and later set
+        to the training threshold after fitting.
 
-    thresh_train: float.
-        Set to None at initialization and later set to the training threshold
-        after fitting.
+     ratio_train: float, between 0 and 1 Set to None at initialization
+        and later set to the ratio k/n of extreme training sample
+        divided by the training sample size.
 
-    ratio_train: float, between 0 and 1
-        Set to None at initialization and later set to the ratio k/n of extreme
-        training sample divided by the training sample size.
-    """
+    Methods _________ .fit : fit the self.model object using the angle
+    of largest covariates and their associated targets
+    
+    .predict : predicts the target based on new (extreme) covariates
+    
+    .cross_validate : evaluates the generalization risk based on
+    cross-validation.  """
 
-    def __init__(self, model, norm_func=None, k=0):
-        self.model = model
+    def __init__(self, task, model, norm_func=None):
+        if task != 'regression' and task !='classification':
+            raise ValueError("task must be either 'classification' or 'regression'")
+        internal_model = deepcopy(model)
+        self.task = task
+        self.model = internal_model
         self.norm_func = (norm_func if norm_func
                           else lambda x: np.linalg.norm(x, axis=1))
         self.thresh_train = None
         self.ratio_train = None
 
-    def fit(self, X_train,  y_train,  k=None, thresh_train=None):
+    def fit(self, X_train, y_train, k=None, thresh_train=None):
         """
         Fit the model using extreme points from the training data where
         the covariate norm exceeds a high threshold.
-        
+
         Parameters
         ----------
         X_train : array-like of shape (n_samples, n_features)
@@ -54,7 +67,7 @@ class Regressor:
 
         y_train : array-like of shape (n_samples,)
             The target values for training.
-        
+
         k : int, optional
             The number of extreme samples used to train the model. Data are
             ordered according to their norm (`norm_func') and the k largest are
@@ -63,7 +76,7 @@ class Regressor:
         thresh_train:  float, optional.
             The radial threshold above which training samples are considered
             extreme for training
-
+        
         Details
         ------
 
@@ -98,16 +111,15 @@ class Regressor:
         Norm_X_train = self.norm_func(X_train)
 
         if k is None and thresh_train is None:
-            k = int(np.sqrt(len(X_train)))
-
-        if thresh_train is None:
-            thresh_train = np.percentile(Norm_X_train,
-                                         100 * (1 - k / len(Norm_X_train)))
-
+            thresh_train = np.quantile(Norm_X_train,
+                                       1 - 1 / np.sqrt(len(Norm_X_train)))
+        if thresh_train is None:  ## then k is not none
+            thresh_train = np.quantile(Norm_X_train,
+                                       1 - k / len(Norm_X_train))
+            
         id_extreme = Norm_X_train >= thresh_train
         if k is None:
             k = np.sum(id_extreme)
-
         # update model with training threshold and k/n ratio
         self.thresh_train = thresh_train
         self.ratio_train = k/len(Norm_X_train)
@@ -123,16 +135,16 @@ class Regressor:
 
     def predict(self, X_test, thresh_predict=None):
         """
-        Predict labels for the extreme test data.
+        Predict the target from  extreme test covariates.
 
         Parameters
         ----------
         X_test : array-like of shape (n_samples, n_features)
-            The test input samples.
+            The test input (covariate) samples.
 
         thresh_predict : float, optional
             The threshold value to select extreme points. If not provided,
-            the threshold used during fitting
+            the threshold used during fitting will be used by default. 
 
 
         Returns
@@ -163,35 +175,17 @@ class Regressor:
 
         return y_pred_extreme,  X_test_extreme, mask_test
 
-    def plot_predictions(self, y_true, y_pred): 
-        """
-        Display predicted vs actual values.
-
-        Parameters
-
-        y_true : array-like of shape (n_samples,)
-            The true values.
-
-        y_pred : array-like of shape (n_samples,)
-            The predicted values.
-        """
-        plt.figure(figsize=(10, 6))
-        plt.scatter(y_true, y_pred, color='blue', marker='o')
-        plt.plot([y_true.min(), y_true.max()], [y_true.min(), y_true.max()], 'r--')
-        plt.xlabel('True Values')
-        plt.ylabel('Predictions')
-        plt.title('True vs Predicted Values')
-        plt.show()
-
-    def cross_validate(self, X, y, k=None, thresh_train=None,
+    def cross_validate(self, X, y,  thresh_train=None,
                        thresh_predict=None, cv=5,
-                       scoring=mean_squared_error, random_state=None):
-        """
-        Perform cross-validation and return the mean  score,
-        the estimated standard deviation of the mean, and the  array of scores.
-        Following Aghbalou et al's CV scheme (K-fold).
-        Differently from the paper the radial threshold for prediction/test
-        may be chosen different from the radial threshold for training.
+                       scoring=None, random_state=None):
+        """Perform cross-validation and return the mean score
+        (defined by the scoring function), the estimated standard
+        deviation of the mean, and the array of scores.
+
+        Follows mostly Aghbalou et al's CV scheme (K-fold), see [1]
+        below.  Differently from the paper the radial threshold for
+        prediction/test may be chosen different from the radial
+        threshold for training.
         
         Parameters
         ----------
@@ -201,21 +195,20 @@ class Regressor:
         y : array-like of shape (n_samples,)
             The target values.
 
-        k : int, optional
-            The number of extreme values to consider.
-
         thresh_train : float, optional
             The threshold for considering extreme values during training.
+            By default, set to the 1- 1/sqrt(n) quantile of the covariates norms.
 
         thresh_predict : float, optional
             The threshold for considering extreme values during prediction.
-
+            By default, set to thresh_train
         cv : int, optional
             The number of folds for cross-validation. Default is 5.
 
         scoring : callable, optional
             The scoring function to evaluate predictions.
-            Default is accuracy_score.
+            Default is `hamming_loss` (i.e. 0-1 loss) for classification tasks
+            and `mean_squared_error` for regression tasks. 
 
         random_state : int, optional
             Seed for the random number generator for shuffling the data.
@@ -223,17 +216,21 @@ class Regressor:
         Returns
         -------
         mean_score : float
-            The mean accuracy score from cross-validation.
+            The mean score from cross-validation.
 
         std_err_mean : float
-            The estimated standard deviation of the mean accuracy score.
+            The estimated standard deviation of the mean score.
 
         scores : list of float
-            The accuracy scores from each fold of the cross-validation.
+            The scores from each fold of the cross-validation.
 
         Details
         ---------
-        see TODO ADD REF
+        see:
+
+        [1] Aghbalou, A., Bertail, P., Portier, F., & Sabourin, A. (2024).
+        Cross-validation on extreme regions. Extremes, 27(4), 505-555.
+
         """
         scores = []
         # begin as in the fit method
@@ -241,34 +238,34 @@ class Regressor:
             raise ValueError("norm_func must be callable")
 
         # check scoring function
+        if scoring is None:
+            if self.task == 'classification':
+                scoring = hamming_loss
+            if self.task == 'regression': 
+                scoring = mean_squared_error
+                
         if not callable(scoring):
-            raise ValueError("scoring must be callable")
+            raise ValueError("scoring must be callable or None")
 
+        
+
+        # check and set thresh_train, as in fit method:
+        # Doing so outside the fit method permits to 
+        # discard folds where there are too few extremes in the training and
+        # validation set, without fitting the model first and
+        # thus saving computational time.
         Norm_X = self.norm_func(X)
-
-        # check and set k and thresh_train, as in fit method:
-        # necessary to do that outside the fit method to discard folds
-        # where there are too few extremes without fitting the model
-        if k is not None and thresh_train is not None:
-            raise ValueError(
-                "k and thresh_train cannot both be set at the same time")
-
-        if k is None and thresh_train is None:
-            k = int(np.sqrt(len(X)))
-
+        
         if thresh_train is None:
-            thresh_train = np.percentile(Norm_X,
-                                         100 * (1 - k / len(Norm_X))
-                                         )
+            thresh_train = np.quantile(Norm_X, (1 - 1 / np.sqrt(len(Norm_X))))
 
-        id_extreme = Norm_X >= thresh_train
-        if k is None:
-            k = np.sum(id_extreme)
+        #id_extreme = Norm_X >= thresh_train
+        #k = np.sum(id_extreme)
 
         if thresh_predict is None:
             thresh_predict = thresh_train
 
-        # which data are considered extreme for training and testing
+        # which data are considered extreme for training and testing: 
         # logical mask vectors of size len(y)
         id_extreme_train = (Norm_X >= thresh_train)
         id_extreme_predict = (Norm_X >= thresh_predict)
@@ -286,7 +283,7 @@ class Regressor:
             y_train, y_test = y[train_index], y[test_index]
 
             # Fit the model on the training data
-            self.fit(X_train, y_train, thresh_train=thresh_train)
+            self.fit(X_train, y_train, k=None, thresh_train=thresh_train)
 
             # Predict on the testing data
             y_pred_extreme,  _, mask_test = \
@@ -295,49 +292,13 @@ class Regressor:
             # Calculate the score
             result = scoring(y_test[mask_test], y_pred_extreme)
             scores.append(result)
-            
-        return np.mean(scores), np.std(scores)/np.sqrt(len(scores)), scores
-    # def evaluate(self,y_true, y_pred):
-    #     """
-    #     Evaluate the regression model using Mean Squared Error.
+        # compute order of magnitude of the error following aghbalou's results
+        # using max(thresh_predict,thresh_train) as a conservative threshold
 
-    #     Parameters
-    #     ----------
-    #     y_true : array-like of shape (n_samples,)
-    #         The true values.
-
-    #     y_pred : array-like of shape (n_samples,)
-    #         The predicted values.
-
-    #     Returns
-    #     -------
-    #     mse : float
-    #         The mean squared error of the predictions.
-    #     """
-    #     return mean_squared_error(y_true, y_pred)
-
-    # def cross_validate(self, X, y, cv=5, scoring='neg_mean_squared_error'):
-    #     """
-    #     Perform cross-validation and return the mean score.
-
-    #     Parameters
-    #     ----------
-    #     X : array-like of shape (n_samples, n_features)
-    #         The input samples.
-
-    #     y : array-like of shape (n_samples,)
-    #         The target values.
-
-    #     cv : int, optional
-    #         The number of folds for K-fold cross-validation.
-
-    #     scoring : str, optional
-    #         The scoring metric for cross-validation.
-
-    #     Returns
-    #     -------
-    #     mean_score : float
-    #         The mean score from cross-validation.
-    #     """
-    #     scores = cross_val_score(self.model, X, y, cv=cv, scoring=scoring)
-    #     return np.mean(scores)
+        mean_size_train = np.sum(id_extreme_train) * (cv - 1)/cv
+        mean_size_predict = np.sum(id_extreme_predict) /cv
+#        min_size = np.minimum(mean_size_predict, mean_size_train)
+        order_error = (1 / np.sqrt(mean_size_predict) +
+                       1 / np.sqrt(mean_size_train))
+#        return np.mean(scores), np.std(scores)/np.sqrt(len(scores)), scores
+        return np.mean(scores), order_error, scores

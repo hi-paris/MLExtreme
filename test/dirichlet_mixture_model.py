@@ -131,7 +131,7 @@ print(Mu_wei)
 mlx.plot_pdf_dirimix_2D(Mu, lnu, wei)
 
 # Generate the dataset using the gen_rv_dirimix function
-X = mlx.gen_rv_dirimix(n, alpha, Mu, wei, lnu, index_weight_noise=0.5**alpha)
+X = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, index_weight_noise=0.5**alpha, size=n)
 
 # Plotting the dataset (2D plot)
 plt.figure(figsize=(8, 6))
@@ -161,7 +161,7 @@ wei = np.array([0.2, 0.8])  # Weights for each component
 lnu = np.log(np.array([10, 5]))  # Log scale parameters
 
 # Generate the dataset
-X = mlx.gen_rv_dirimix(n, alpha, Mu, wei, lnu)
+X = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, size=n)
 
 # from mpl_toolkits.mplot3d import Axes3D
 

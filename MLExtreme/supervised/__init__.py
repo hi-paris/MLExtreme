@@ -1,3 +1,4 @@
-from .classification import Classifier
-from .regression import Regressor 
-from .tirex import *
+from .xcovPredictor import xcovPredictor
+from .supervised_utils import plot_classif, plot_predictions
+
+# from .tirex import *

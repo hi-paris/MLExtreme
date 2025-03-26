@@ -2,17 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import hamming_loss
 from sklearn.model_selection import KFold
-
+from copy import deepcopy
 
 class Classifier:
     """
-    A custom classifier that uses a specified model and a
-    normalization function to classify data.
-
+    A classifier dedicated to prediction on the tails of the covariates.
+    
     Parameters
     ----------
     model : object
-        The model to be used for classification. Must have a `.fit` method.
+        The model to be used for classification. Must have a `.fit` method and
+        a `.predict' method.
 
     norm_func : callable, optional
         A function that computes a norm of the input data. Default is L2 norm.
@@ -22,6 +22,7 @@ class Classifier:
     ----------
     model : object
         The model used for classification.
+        It is a `copy.deepcopy` copy  of the argument passed to the contructor.
 
     norm_func : callable
         The norm function used at training and testing for selecting extremes.
@@ -33,10 +34,19 @@ class Classifier:
     ratio_train: float, between 0 and 1
         Set to None at initialization and later set to the ratio k/n of extreme
         training sample divided by the training sample size.
+
+    Methods
+    _________
+    .fit :  fit the self.model object using the angle of largest covariates and their associated targets
+    
+    .predict : predicts the target based on new (extreme) covariates
+    
+    .cross_validate : evaluates the generalization risk based on cross-validation. 
     """
 
     def __init__(self, model, norm_func=None):
-        self.model = model
+        internal_model = deepcopy(model)
+        self.model = internal_model
         self.norm_func = (norm_func if norm_func
                           else lambda x: np.linalg.norm(x, axis=1))
         self.thresh_train = None
@@ -163,41 +173,8 @@ class Classifier:
 
         return y_pred_extreme,  X_test_extreme, mask_test
 
-    def plot_classif(self, X, y_test, y_pred):
-        """
-        Display points classified according to predictions and actual values.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The input samples, supposed to be extreme.
-
-        y_test : array-like of shape (n_samples,)
-            The true labels.
-
-        y_pred : array-like of shape (n_samples,)
-            The predicted labels.
-        """
-        plt.figure(figsize=(10, 6))
-        plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 0)],
-                    X[:, 1][(y_pred == 0) & (y_test == 0)], color='blue',
-                    marker='o', label='True Negative', alpha=0.5)
-        plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 1)],
-                    X[:, 1][(y_pred == 0) & (y_test == 1)], color='red',
-                    marker='x', label='False Negative', alpha=0.5)
-        plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 0)],
-                    X[:, 1][(y_pred == 1) & (y_test == 0)],
-                    color='blue', marker='x', label='False Positive', alpha=0.5)
-        plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 1)],
-                    X[:, 1][(y_pred == 1) & (y_test == 1)], color='red',
-                    marker='o', label='True Positive', alpha=0.5)
-        plt.title('Classification Results')
-        plt.xlabel('Feature 1')
-        plt.ylabel('Feature 2')
-        plt.legend()
-        plt.show()
-
-    def cross_validate(self, X, y, k=None, thresh_train=None,
+ 
+    def cross_validate(self, X, y,  thresh_train=None,
                        thresh_predict=None, cv=5,
                        scoring=hamming_loss, random_state=None):
         """
@@ -214,9 +191,6 @@ class Classifier:
 
         y : array-like of shape (n_samples,)
             The target values.
-
-        k : int, optional
-            The number of extreme values to consider.
 
         thresh_train : float, optional
             The threshold for considering extreme values during training.
@@ -311,3 +285,40 @@ class Classifier:
             scores.append(result)
             
         return np.mean(scores), np.std(scores)/np.sqrt(len(scores)), scores
+
+
+def plot_classif(X, y_test, y_pred, title=None):
+    """
+    Display points classified according to predictions and actual values.
+    the covariate points are projected onto there first and last component. 
+    Parameters
+    ----------
+    X : array-like of shape (n_samples, n_features)
+        The input samples. 
+
+    y_test : array-like of shape (n_samples,)
+        The true labels.
+
+    y_pred : array-like of shape (n_samples,)
+        The predicted labels.
+    """
+    plt.figure(figsize=(10, 6))
+    plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 0)],
+                X[:, -1][(y_pred == 0) & (y_test == 0)], color='blue',
+                marker='o', label='True Negative', alpha=0.5)
+    plt.scatter(X[:, 0][(y_pred == 0) & (y_test == 1)],
+                X[:, -1][(y_pred == 0) & (y_test == 1)], color='red',
+                marker='x', label='False Negative', alpha=0.5)
+    plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 0)],
+                X[:, -1][(y_pred == 1) & (y_test == 0)],
+                color='blue', marker='x', label='False Positive', alpha=0.5)
+    plt.scatter(X[:, 0][(y_pred == 1) & (y_test == 1)],
+                X[:, -1][(y_pred == 1) & (y_test == 1)], color='red',
+                marker='o', label='True Positive', alpha=0.5)
+    if title is None:
+        title = 'Classification Results'
+    plt.title(title)
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature p')
+    plt.legend()
+    plt.show()
