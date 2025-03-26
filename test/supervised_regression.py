@@ -75,7 +75,7 @@ are  satisfied.
 # %%
 # sample size and dimension
 n = 20000
-Dim = 2  # # set Dim to 100 for a high-dimensional toy example.
+Dim = 10  # # set Dim to 100 for a high-dimensional toy example.
 
 # Generating covariates X and covariates y
 np.random.seed(42)
@@ -93,22 +93,22 @@ y = mlx.gen_target_CovariateRV(X, param_decay_fun=2*alpha)
 
 # %%
 # Vizualisation (only meaningful when Dim == 2)
-if Dim ==2:
-    plt.figure(figsize=(10, 6))
-    scatter = plt.scatter(X[:, 0]**(alpha/4), X[:, 1]**(alpha/4), c=y,
-                          cmap='gray', alpha=0.5)
-    # NB: exponent alpha/4 above is meant to help visualization only. may be removed.
-    colorbar = plt.colorbar(scatter)
-    colorbar.set_label('Target Value (y)')
-    plt.xlabel('Feature 1')
-    plt.ylabel('Feature 2')
-    plt.title('Scatter Plot of the regression dataset')
-    plt.show()
+
+plt.figure(figsize=(10, 6))
+scatter = plt.scatter(X[:, 0]**(alpha/4), X[:, -1]**(alpha/4), c=y,
+                      cmap='gray', alpha=0.5)
+# NB: exponent alpha/4 above is meant to help visualization only. may be removed.
+colorbar = plt.colorbar(scatter)
+colorbar.set_label('Target Value (y)')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature d')
+plt.title('Scatter Plot of the regression dataset')
+plt.show()
 
 # %%
 # Splitting the data into training and test sets
 split = 0.5
-n_train = n * (1-split)
+n_train = int(n * (1-split))
 # n_test = n * split 
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     test_size=split,
@@ -150,8 +150,8 @@ pvalues, ratio_max = mlx.test_indep_radius_rest(X_train, y_train, ratios,
 
 k_max = int(ratio_max * n_train)
 
-
-# plot  and print k_max 
+# %%
+# plot and print k_max 
 mlx.plot_indep_radius_rest(pvalues, ratios, ratio_max, n_train)
 print(f'rule-of-thumb max admissible k: {k_max}, \n\
 rule-of-thumb max admissible ratio of extremes: {mlx.round_signif(ratio_max, 2)}')
@@ -176,8 +176,9 @@ print(f'rule-of-thumb k_train: {k_train}')
 # %%
 # Pick a regression model in sklearn, previously imported
 model = LinearRegression()  # RandomForestRegressor() #
+task = 'regression'
 # Regressor class initialization (basic model is hard copied in the constructor)
-regressor = mlx.Regressor(model, norm_func)
+regressor = mlx.xcovPredictor(task, model, norm_func)
 naive = deepcopy(model)
 
 # Model training
@@ -212,12 +213,12 @@ print(f'mse constant predictor: {np.var(y_test_extreme):4f}')
 # %%
 # Display regression results:
 # MLX model:  
-regressor.plot_predictions(y_test_extreme, y_pred_extreme)
+mlx.plot_predictions(y_test_extreme, y_pred_extreme)
 
 #%% 
 # Display regression results:
 # Naive model:  
-regressor.plot_predictions(y_test_extreme, y_pred_naive_extreme)
+mlx.plot_predictions(y_test_extreme, y_pred_naive_extreme)
 
 # %% [markdown]
 # ## Choice of k: Episode 2, cross-validation <a class="anchor" id="Choice_k_2"></a>
@@ -227,7 +228,7 @@ regressor.plot_predictions(y_test_extreme, y_pred_naive_extreme)
 # will be chosen by cross-validation
 
 # %%
-ratio_train_vect = np.geomspace(0.01, 0.15, num=10)
+ratio_train_vect = np.geomspace(0.01, 0.4, num=10)
 k_train_vect = (n_train * ratio_train_vect).astype(int)
 thresh_train_vect = np.array([np.quantile(norm_X_train, 1 - r)
                               for r in ratio_train_vect])
@@ -250,8 +251,8 @@ kscores_sd = np.array(kscores_sd)
 # %%
 #  plot cv results
 plt.plot(k_train_vect, kscores)
-plt.fill_between(k_train_vect, kscores + 1.64 * kscores_sd,
-                 kscores - 1.64 * kscores_sd, color='blue', alpha=0.2)
+plt.fill_between(k_train_vect, kscores +  kscores_sd,
+                 kscores - kscores_sd, color='blue', alpha=0.2)
 plt.show()
 
 # %%

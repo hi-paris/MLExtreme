@@ -283,8 +283,14 @@ class xcovPredictor:
             y_train, y_test = y[train_index], y[test_index]
 
             # Fit the model on the training data
-            self.fit(X_train, y_train, k=None, thresh_train=thresh_train)
-
+            try:
+                self.fit(X_train, y_train, k=None, thresh_train=thresh_train)
+                
+            except Exception as e:
+                ratio_train = size_train_ex / len(train_index)
+                print(f"Warning: An error occurred for \
+                extreme ratio (training) = {ratio_train:4f}. Error: {e}")
+                continue 
             # Predict on the testing data
             y_pred_extreme,  _, mask_test = \
                 self.predict(X_test, thresh_predict=thresh_predict)
