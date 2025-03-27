@@ -14,14 +14,12 @@ Implements and illustrates an example and associated method  suggested in
 # ## Table of Contents
 # * [Preliminary manipulations](#Preliminary)
 # * [Data generation](#Data_generation)
-# * [Transforming the target] (#TargetTransform)
-#     * [Option 1: Linear transform] (#TargetTransform1)
-#     * [Option 2: Nonlinear transform] (#TargetTransform2)
+# * [Transforming the target](#TargetTransform)
+#     * [Option 1: Linear transform](#TargetTransform1)
+#     * [Option 2: Nonlinear transform](#TargetTransform2)
 # * [Choice of k, Episode 1.](#Choice_k_1)
 # * [Learning, prediction, evaluation](#Learning)
 # * [Choice of k: Episode 2, cross-validation](#Choice_k_2)
-# * [Comparison with baseline](#Comparison)
-# * [Nonstandard covariates: rank-transformation ](#nonstandard)
 
 # %% [markdown]
 # ## Preliminary manipulations <a class="anchor" id="Preliminary"></a>
@@ -33,6 +31,7 @@ import os
 os.getcwd()
 # os.chdir("../")
 
+# %%
 # imports 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,9 +44,6 @@ from sklearn.linear_model import LinearRegression
 from copy import deepcopy
 import MLExtreme as mlx
 
-
-# 
-#
 # %% [markdown]
 """
 Choose a norm function according to which 'extreme' covariates will be
@@ -68,7 +64,7 @@ def norm_func(x):
 
 # %% [markdown]
 # ## Data generation <a id="Data_generation"></a>
-# 
+#
 # Multivariate regularly varying (Heavy-tailed) samples are
 # generated. The limit angular measure (in the tail) is a Dirichlet
 # Mixture distribution with parameters Mu,wei,lnu defined below.  For
@@ -81,7 +77,7 @@ np.random.seed(42)
 n = int(4 * 10**4)
 Dim = 2
 k = 2
-alpha = 4.1 # so that standard error estimators are consistent
+alpha = 4.1  # so that standard error estimators are consistent
 Mu0 = np.array([[0.1, 0.7, 0.2], [0.2, 0.1, 0.7]])
 wei0 = np.ones(2)
 Mu, wei = mlx.normalize_param_dirimix(Mu0, wei0)
@@ -89,8 +85,8 @@ lnu = np.log(10 / np.min(Mu, axis=1))
 # Define  adversarial bulk angular measure, see function gen_rv_dirimix
 Mu_bulk = np.array([[0.7, 0.15, 0.15], [0.15, 0.25, 0.6]])
 
-XZ = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, scale_weight_noise=1,
-                        index_weight_noise=8, Mu_bulk=Mu_bulk,
+XZ = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, scale_weight_noise=1.5,
+                        index_weight_noise=2*alpha, Mu_bulk=Mu_bulk,
                         size=n)
 X = XZ[:, :-1]
 z = XZ[:, -1]
@@ -98,12 +94,13 @@ z = XZ[:, -1]
 # %%
 # ## plot limit angular measure and bulk angular measure
 mlx.plot_pdf_dirimix_3D(Mu, wei, lnu, n_points=100)
+    
 mlx.plot_pdf_dirimix_3D(Mu_bulk, wei, lnu, n_points=100)
 
 # %% [markdown]
-# ## Transforming the target <a id="TargetTransform"></a>
+# ## Transforming the target <a class="anchor" id="TargetTransform"></a>
 #
-# ### Option 1: Linear transform  <a id="TargetTransform1"></a>
+# ### Option 1: Linear transform  <a class="anchor" id="TargetTransform1"></a>
 # Learn a prediction model for a linear
 # tranform of the target, y = Target / ||X||.  appropriate when
 # Target / ||X|| is bounded or at least not clearly heavy tailed
@@ -119,7 +116,7 @@ np.sum((z1 - z)**2)
 
 # %% [markdown]
 # ### Option 2:  Nonlinear transformation <a id="TargetTransform2"></a>
-# 
+#
 #  y = z / (||(x,z) ||) where z is the original target, and x the
 # covariate.
 #
@@ -256,9 +253,10 @@ print(f'rule-of-thumb selected k_train: {k_train}')
 # %%
 # Pick   classifier models in sklearn, previously imported
 model = LinearRegression()
+task = 'regression'
 # Initialize Regressor class instances with deep copies of the model to avoid cross-referencing issues.
-regressor1 = mlx.Regressor(model, norm_func)
-regressor2 = mlx.Regressor(model, norm_func)
+regressor1 = mlx.xcovPredictor(task, model, norm_func)
+regressor2 = mlx.xcovPredictor(task, model, norm_func)
 # Use the original model directly for a naive approach.
 naive = deepcopy(model)
 
@@ -274,7 +272,8 @@ y_pred_extreme2, _, _  = regressor2.predict(X_test, thresh_predict)
 z_pred_naive = naive.predict(X_test)
 z_pred_naive_extreme = z_pred_naive[mask_test]
 
-# trained (estimated) parameters: 
+# trained (estimated) parameters:
+print("trained parameters of models 1,2, naive: ")
 print(regressor1.model.coef_, regressor1.model.intercept_)
 print(regressor2.model.coef_, regressor2.model.intercept_)
 print(naive.coef_, naive.intercept_)
@@ -293,10 +292,10 @@ print(f'MSE2 - transformed target 2: {MSE2:.4f}')
 # Display regression results
 
 # %%
-regressor1.plot_predictions(y_test_extreme1, y_pred_extreme1)
+mlx.plot_predictions(y_test_extreme1, y_pred_extreme1)
 
 # %%
-regressor2.plot_predictions(y_test_extreme2, y_pred_extreme2)
+mlx.plot_predictions(y_test_extreme2, y_pred_extreme2)
 
 # %%[markdown]
 # ### How about performance in terms of the original target?
@@ -314,15 +313,15 @@ z_pred_extreme2 = mlx.inv_transform_target_nonlin(y_pred_extreme2,
 
 # %%
 # MLX predictions method 1 
-regressor1.plot_predictions(z_test_extreme, z_pred_extreme1)
+mlx.plot_predictions(z_test_extreme, z_pred_extreme1)
 
 # %%
 # MLX predictions method 2
-regressor2.plot_predictions(z_test_extreme, z_pred_extreme2)
+mlx.plot_predictions(z_test_extreme, z_pred_extreme2)
 
 # %%
 # naive predictions
-regressor1.plot_predictions(z_test_extreme, z_pred_naive_extreme)
+mlx.plot_predictions(z_test_extreme, z_pred_naive_extreme)
 
 # %%
 # MSE comparison, raw target 
@@ -363,12 +362,10 @@ print(f' half-width CI for MSE (original target), naive method : \
 
 # %%
 # Set the range of candidates training threshold, using X_train only.
-ratio_train_vect = np.geomspace(0.01, 0.2, num=10)
+ratio_train_vect = np.geomspace(0.01, 0.6, num=15)
 k_train_vect = (n_train * ratio_train_vect).astype(int)
 thresh_train_vect = np.array([np.quantile(norm_X_train, 1 - r)
                               for r in ratio_train_vect])
-regressor1 = mlx.Regressor(model, norm_func)
-regressor2 = mlx.Regressor(model, norm_func)
 # cross-validation on the training set. 
 kscores1 = []
 kscores_sd1 = []
@@ -398,14 +395,14 @@ kscores_sd2 = np.array(kscores_sd2)
 # %%
 # plot the results
 plt.plot(k_train_vect, kscores1)
-plt.fill_between(k_train_vect, kscores1 + 1.64 * kscores_sd1,
-                 kscores1 - 1.64 * kscores_sd1, color='blue', alpha=0.2)
+plt.fill_between(k_train_vect, kscores1 +  kscores_sd1,
+                 kscores1 -  kscores_sd1, color='blue', alpha=0.2)
 plt.title("optimal k, linear method 1") 
 plt.show()
 
 plt.plot(k_train_vect, kscores2)
-plt.fill_between(k_train_vect, kscores2 + 1.64 * kscores_sd2,
-                 kscores2 - 1.64 * kscores_sd2, color='blue', alpha=0.2)
+plt.fill_between(k_train_vect, kscores2 +  kscores_sd2,
+                 kscores2 -  kscores_sd2, color='blue', alpha=0.2)
 plt.title("optimal k, nonlinear method 2")
 plt.show()
 
@@ -420,7 +417,7 @@ print(f'optimal k linear transfom method 2: {k_opt2}')
 
 print(f'rule-of-thumb k : {int(n_train * ratio_max * 4/5)}')
 
-# %% [marqkdown]
+# %% [markdown]
 # Methods 1 and 2: retrain (on training set) and evaluate (on test set)
 # using  optimal k selected by CV 
 

@@ -47,8 +47,13 @@ def gen_rv_dirimix(alpha=1, Mu =np.array([ [0.5 ,  0.5]]),
     R = np.random.pareto(alpha, size=n)+1
     Theta = gen_dirimix(Mu=Mu,  wei=wei, lnu=lnu, size=n)
     dim = np.shape(Mu)[1]
+    # if Mu_bulk is None:
+    #     Mu_bulk = (1 - Mu)/(dim - 1)
     if Mu_bulk is None:
-        Mu_bulk = (1 - Mu)/(dim - 1)
+        Mu_bulk_0 = np.maximum((2/dim - Mu), 10**(-5))
+        r_0 = np.sum(Mu_bulk_0, axis=1)
+        Mu_bulk = Mu_bulk_0 / r_0.reshape(-1,1)
+    
     Noise = gen_dirimix(Mu=Mu_bulk, wei=wei, lnu=lnu, size=n)
     # gen_dirichlet(n, ) np.ones((n, np.shape(Mu)[0])))
     w = np.minimum(1,  (R/scale_weight_noise) ** (-index_weight_noise))

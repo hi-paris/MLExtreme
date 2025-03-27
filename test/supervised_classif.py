@@ -74,20 +74,20 @@ In this toy example, each class (conditioned on $ y = 1 $ or $  y = 0 $) follows
 """
 # %%
 # data generation
+Dim = 2
 n = 40000
-Dim = 2 
 # This toy example shows gnerally improved performance of MLX models up to Dim=10. 
 
 alpha = 2 # regular variation index of the covariate
 np.random.seed(1)
 # un-normalized mean angle of class 0:
-mu0 = np.geomspace(1, 2**Dim,num=Dim)
+mu0 = np.geomspace(1, 2**(np.sqrt(Dim)), num=Dim)
 mu0 = mu0 / np.sum(mu0)
 # log-concentration parameter for Dirichlet: 
-lnu = np.log(3/mu0.min())*np.ones(Dim)
-X, y = mlx.gen_classif_data_diriClasses(mu0=mu0, lnu=lnu, 
+lnu = np.log(1.5/mu0.min())*np.ones(Dim)
+X, y = mlx.gen_classif_data_diriClasses(mu0=mu0, lnu=lnu,
                                         alpha=alpha,
-                                        index_weight_noise=2*(alpha/Dim)**2,
+                                        index_weight_noise=2*alpha,
                                         size=n)
 # For more details: 
 # help(mlx.gen_classif_data_diriClasses)
@@ -231,7 +231,7 @@ Two purposes are envisioned for cross-validation here:
 """
 
 # %% [markdown]
-#  ### 3.a goal:  Evaluatiing model performance 
+#  ### 3.a goal:  Evaluating model performance 
 
 # %%
 #  Perform cross-validation  for fixed thresh_train
@@ -260,6 +260,8 @@ if showPlots:
 # %% [markdown]
 # ### 3.b goal:  choosing the training threshold.
 #         (designed for a fixed prediction threshold)
+
+# %%
 # choose a range of training k's  (thresh_predict is defined above)
 ratio_train_vect = np.linspace(0.005, 0.4, num=25)
 k_train_vect = (n_train * ratio_train_vect).astype(int)
@@ -345,7 +347,7 @@ print(f'hamming  naive: {hamming_naive:.4f}, \
 # CV and rule of thumb have similar performance. 
 
 # %% [markdown]
-# ##  Non-standard input. <a class="anchor" id="nonstandard"></a>
+# ##  Non-standard input: Rank-transformation. <a class="anchor" id="nonstandard"></a>
 # 
 # (Coordinates of X may have different regular variation indices,
 # or even not be regularly varying at all).
@@ -443,4 +445,3 @@ disagreements is moderate:
 print(f' proportion of discordant selections of extremes on the test set: \
  {hamming_loss(mask_test, mask_test_rt):4f}')
 
-"

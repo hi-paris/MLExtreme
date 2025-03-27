@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.special import loggamma  # gamma, betaln
 import matplotlib.pyplot as plt
-
+import warnings
 
 def round_signif(numbers, digits):
     """
@@ -587,8 +587,19 @@ def test_indep_radius_rest(X, y, ratio_ext, norm_func, random_state=1):
 
         pvalues.append(test.pvalue)
         
-    pvalues = np.array(pvalues)    
-    i_max = np.max(np.where(pvalues > 0.05)[0])
+    pvalues = np.array(pvalues)
+    # Find indices where the condition is satisfied
+    indices = np.where(pvalues > 0.05)[0]
+
+    # Check if any indices satisfy the condition
+    if len(indices) > 0:
+        i_max = np.max(indices)
+    else:
+        warnings.warn("No indices satisfy the condition pvalues > 0.05.",
+                      UserWarning)
+        
+        i_max = 0
+    
     ratio_max = ratio_ext[i_max]
     return pvalues, ratio_max 
 

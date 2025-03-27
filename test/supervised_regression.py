@@ -75,7 +75,7 @@ are  satisfied.
 # %%
 # sample size and dimension
 n = 20000
-Dim = 10  # # set Dim to 100 for a high-dimensional toy example.
+Dim = 2  # # set Dim to 100 for a high-dimensional toy example.
 
 # Generating covariates X and covariates y
 np.random.seed(42)
@@ -314,7 +314,7 @@ by one order of magnitude!  """
 
 
 # %% [markdown]
-# ##  Non-standard input. <a class="anchor" id="nonstandard"></a>
+# ##  Non-standard input: Rank-transformation. <a class="anchor" id="nonstandard"></a>
 # 
 # (Coordinates of X may have different regular variation indices,
 # or even not be regularly varying at all).
