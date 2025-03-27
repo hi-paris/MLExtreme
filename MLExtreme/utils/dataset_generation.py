@@ -4,7 +4,7 @@ import numpy as np
 from .EVT_basics import gen_dirimix, normalize_param_dirimix
 
 
-def gen_rv_dirimix(alpha=1, Mu =np.array([ [0.5 ,  0.5]]),
+def gen_rv_dirimix(alpha=1, Mu=np.array([[0.5,  0.5]]),
                    wei=np.array([1]), lnu=np.array([2]),
                    scale_weight_noise=1,
                    index_weight_noise=None, Mu_bulk=None, size=1):
@@ -31,10 +31,10 @@ def gen_rv_dirimix(alpha=1, Mu =np.array([ [0.5 ,  0.5]]),
         Exponent ruling how the noise vanishes for large R. Default is -alpha.
 
     Details
-    ___________ 
-        The noise influence vanishes proportional to
-        ` (R/scale_weight_noise)**(-index_weight_noise) `
-        where `R` is the  norm of the sample point.
+    ___________
+        The noise influence vanishes proportionally to
+        ` (scale_weight_noise/R)**(index_weight_noise) `
+        where `R` is the 1-norm of the sample point.
     Returns:
     --------
     ndarray, shape (n, d)
@@ -52,11 +52,11 @@ def gen_rv_dirimix(alpha=1, Mu =np.array([ [0.5 ,  0.5]]),
     if Mu_bulk is None:
         Mu_bulk_0 = np.maximum((2/dim - Mu), 10**(-5))
         r_0 = np.sum(Mu_bulk_0, axis=1)
-        Mu_bulk = Mu_bulk_0 / r_0.reshape(-1,1)
-    
+        Mu_bulk = Mu_bulk_0 / r_0.reshape(-1, 1)
+
     Noise = gen_dirimix(Mu=Mu_bulk, wei=wei, lnu=lnu, size=n)
     # gen_dirichlet(n, ) np.ones((n, np.shape(Mu)[0])))
-    w = np.minimum(1,  (R/scale_weight_noise) ** (-index_weight_noise))
+    w = np.minimum(1,  (scale_weight_noise/R) ** (index_weight_noise))
     newTheta = (1 - w[:, np.newaxis]) * Theta + w[:, np.newaxis] * Noise
     X = R[:, np.newaxis] * newTheta
 
@@ -78,17 +78,17 @@ def gen_classif_data_diriClasses(mu0=np.array([0.7, 0.3]),
     size1 = int(size*wei[1])
     Mu0 = Mu[0, :].reshape(1, -1)
     Mu1 = Mu[1, :].reshape(1, -1)
-    Dim = np.shape(Mu)[1]
+    #Dim = np.shape(Mu)[1]
     data0 = gen_rv_dirimix(alpha, Mu0,
                            wei=np.array([1]),
                            lnu=np.array([lnu[0]]),
-                           scale_weight_noise= 10**(1/alpha), #np.sqrt(Dim),
+                           scale_weight_noise=10**(1/alpha), #np.sqrt(Dim),
                            index_weight_noise=index_weight_noise,
                            size=size0)
     data1 = gen_rv_dirimix(alpha, Mu1,
                            wei=np.array([1]),
                            lnu=np.array([lnu[1]]),
-                           scale_weight_noise= 10**(1/alpha), #np.sqrt(Dim),
+                           scale_weight_noise=10**(1/alpha), #np.sqrt(Dim),
                            index_weight_noise=index_weight_noise,
                            size=size1)
     y = np.vstack((np.zeros(size0).reshape(-1, 1),
@@ -101,7 +101,7 @@ def gen_classif_data_diriClasses(mu0=np.array([0.7, 0.3]),
 
 
 # ## target generation for regression models:
-# specific instance of additive noise nodel considered in Huet et al. 
+# specific instance of additive noise nodel considered in Huet et al.
 def tail_reg_fun_default(angle):
     """
     Default tail regression function for generating target values.

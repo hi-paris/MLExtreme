@@ -5,24 +5,84 @@ import numpy as np
 import networkx as nx
 
 
-################
-# Extreme data #
-################
+def remove_zero_row(binary_array):
+    """
+    Removes rows that contain only zeros from a binary matrix.
+
+    Parameters:
+    - binary_array (np.ndarray): A binary matrix from which to remove zero rows.
+
+    Returns:
+    - np.ndarray: The binary matrix with zero rows removed.
+    """
+    # Remove rows where the sum of elements is zero (i.e., all
+    # elements are zero)
+    return binary_array[np.sum(binary_array, axis=1) > 0]
 
 
-def remove_zero_row(v_bin):
-    """Remove rows that have contain only zeros."""
-    return v_bin[np.sum(v_bin, axis=1) > 0]
+# def remove_zero_row(v_bin):
+#     """Remove rows that contain only zeros in matrix v_bin."""
+#     return v_bin[np.sum(v_bin, axis=1) > 0]
 
 
-def above_radius_bin(v_rank, radius, eps=None):
-    """Returns binary matrix with values above radius."""
-    if eps:
-        v_bin = v_rank[np.max(v_rank, axis=1) > radius] > radius*eps
+import numpy as np
+
+def binary_large_features(std_data, radial_threshold, epsilon=None):
+    """Filters extreme samples from the input `std_data`, returns a
+    binary matrix of same number of rows as the number of extreme
+    samples, where each row is a binary vector indicating which
+    components of the extreme sample point are large.  Here the radius
+    of a sample point is its infinite norm and a sample point is
+    extreme if its radius is greater than `radial_threshold'.  Also a
+    sample's component is 'large' means that it is greater than
+    `epsilon * radial_threshold` .
+
+    Parameters:
+
+    - std_data (np.ndarray): A data matrix. For meaningful usage,
+      columns should be preliminarily sdandardized.
+
+    - radial_threshold (float): The threshold value to compare against.
+   
+    - epsilon (float, optional): A tolerance parameter between 0 and 1
+        for the radius threshold. If None, treated as 1. A value of
+        zero will have the function declare as 'large' every
+        components in extreme sample points. On the contrary, with
+        `epsilon=1`, a component needs to exceed the radial threshold
+        to be declared large.
+
+    Returns:
+
+    - np.ndarray: A binary matrix with values above the
+    radius threshold, with zero rows removed.
+
+    Note: For standardizing a raw data input, see mlx.rank_transform,
+    mlx.rank_transform_test.
+
+    """
+    if epsilon is not None:
+        # Create a binary matrix where values are above the scaled
+        # radius threshold
+        extreme_samples = std_data[np.max(std_data, axis=1) >=
+                                   radial_threshold]
+        binary_matrix = extreme_samples > radial_threshold * epsilon
     else:
-        v_bin = v_rank > radius
+        # Create a binary matrix which values are  above the
+        # radius threshold
+        binary_matrix = std_data >= radial_threshold
 
-    return remove_zero_row(v_bin.astype(float))
+    # Convert the binary matrix to float type and remove zero rows
+    return remove_zero_row(binary_matrix.astype(float))
+
+# def  above_radius_bin(v_rank, radius, eps=None):
+    # """Returns binary matrix with values above radius.
+    # case eps=None is treated as if eps=1"""
+    # if eps:
+    #     v_bin = v_rank[np.max(v_rank, axis=1) > radius] > radius*eps
+    # else: 
+    #     v_bin = v_rank > radius
+
+    # return remove_zero_row(v_bin.astype(float))
 
 
 def kth_largest_bin(v_rank, k):
@@ -58,18 +118,23 @@ def check_errors(charged_faces, result_faces, dim):
     cond_2 = np.dot(faces_mat_true, faces_mat.T) == np.sum(faces_mat, axis=1)
     # Intersect sub and supsets to get recovered faces
     ind_exct_supsets = list(set(np.nonzero(np.sum(cond_1, axis=1))[0]) -
-                            set(np.nonzero(np.sum(cond_1 * cond_2.T, axis=1))[0]))
+                            set(np.nonzero(np.sum(cond_1 * cond_2.T,
+                                                  axis=1))[0]))
     ind_exct_subsets = list(set(np.nonzero(np.sum(cond_2.T, axis=1))[0]) -
-                            set(np.nonzero(np.sum(cond_1 * cond_2.T, axis=1))[0]))
+                            set(np.nonzero(np.sum(cond_1 * cond_2.T,
+                                                  axis=1))[0]))
     ind_pure_false = list(set(range(len(result_faces))) -
-                          (set(np.nonzero(np.sum(cond_1 * cond_2.T, axis=1))[0]) |
+                          (set(np.nonzero(np.sum(cond_1 * cond_2.T,
+                                                 axis=1))[0]) |
                            set(ind_exct_supsets) | set(ind_exct_subsets)))
     # Results
-    founds = [result_faces[i] for i in np.nonzero(np.sum(cond_1 * cond_2.T, axis=1))[0]]
+    founds = [result_faces[i]
+              for i in np.nonzero(np.sum(cond_1 * cond_2.T, axis=1))[0]]
     falses_pure = [result_faces[i] for i in ind_pure_false]
     exct_subsets = [result_faces[i] for i in ind_exct_subsets]
     exct_supsets = [result_faces[i] for i in ind_exct_supsets]
-    misseds = [charged_faces[i] for i in np.nonzero(np.sum(cond_1 * cond_2.T, axis=0) == 0)[0]]
+    misseds = [charged_faces[i]
+               for i in np.nonzero(np.sum(cond_1 * cond_2.T, axis=0) == 0)[0]]
 
     return founds, misseds, falses_pure, exct_subsets, exct_supsets
 
@@ -108,7 +173,7 @@ def levenshtein_kernel_dist(v_bin):
 def levenshtein_faces_radius(faces, radius, v_rank):
     """Average pseudo-Levenshtein distance between list of faces and v_rank rows."""
     faces = list_faces_to_vect(faces, dim=v_rank.shape[1])
-    v_bin = above_radius_bin(v_rank, radius)
+    v_bin = binary_large_features(v_rank, radius)
 
     return np.mean([np.min(levenshtein_dist_mat(v_row, faces)) for v_row in v_bin])
 
@@ -120,7 +185,7 @@ def levenshtein_faces_radiuss(faces, radiuss, v_rank, eps=1.):
     nb_extr = []
     for radius in radiuss:
         dist = []
-        v_bin = above_radius_bin(v_rank, radius, eps)
+        v_bin = binary_large_features(v_rank, radius, eps)
         for v_row in v_bin:
             dist.append(np.min(levenshtein_dist_mat(v_row, faces)))
         mean_dist.append(np.sum(dist)/len(v_bin))

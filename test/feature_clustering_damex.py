@@ -1,3 +1,14 @@
+# %% [markdown]
+# # [Damex tutorial]
+
+# %% [markdown]
+"""
+Implements the DAMEX algorithm described in [1].
+The considered unsupervised task is to discover the groups of components of a random vector which are comparatively likely to be simultaneously large. 
+
+[1] Goix, N., Sabourin, A., & Clémençon, S. (2017). Sparse representation of multivariate extremes with applications to anomaly detection. Journal of Multivariate Analysis, 161, 12-31.
+"""
+
 # %%
 # # Set working directory if necessary
 # import os
@@ -7,54 +18,19 @@
 # %% 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
-from sklearn.ensemble import RandomForestRegressor
-# from sklearn.ensemble import GradientBoostingRegressor
-#from scipy.stats import pareto
 import pprint as pp
 import MLExtreme as mlx
-
-# #import dcor
-# import time 
-
-
 # import pdb
-# # %%
-# # sample size and dimension
-# n = 20000
-# Dim = 2
+
+# Define the norm function as the infinite norm.
+def norm_func(X):
+    return np.max(X, axis=1)
 
 
-
-radius = 3
-epsilon = 0.3
-X_test = np.array([
-    [12, 13, 14],
-    [1, 1, 1],
-    [12, 0.5, 14],
-    [12, 5, 14],
-    [1, 2, 3],
-    [12, 0.5, 0.5],
-    [12, 0.5, 0.5],
-    [0.5, 0.5, 12]])
-
-bin_array = mlx.binary_large_features(X_test, radius, epsilon=epsilon)
-bin_array
-faces, counts = mlx.damex_0(bin_array)
-# faces_dict = mlx.list_to_dict_size(faces) # # order faces by their dimension: usage??
-faces2, limit_mass = mlx.damex(X_test, radius, epsilon=epsilon, min_counts=0,
-                               standardize=False)
-
-print(faces)
-print(faces2)
-print(counts)
-print(limit_mass)
-
-# %% [Damex tutorial]
+# %% [markdown]
+# ##Generate data
 
 # %%
-# Generate data
 # Mu = np.array([
 #     [1, 0, 0, 0, 0],
 #     [0, 0, 0, 0, 1],
@@ -62,8 +38,6 @@ print(limit_mass)
 #     [0, 0, 0, 1, 1],
 #     [1, 1, 1, 1, 1]
 # ])
-def norm_func(X):
-    return np.max(X, axis = 1)
 
 n = 10000
 Mu = np.array([
@@ -77,51 +51,72 @@ wei = np.ones(k)/k
 Mu, wei = mlx.normalize_param_dirimix(Mu, wei)
 print(f'Mu matrix: \n {np.round(Mu, 3)}')
 print(f'Weights: {np.round(wei,3)}' )
-lnu =  np.log(10/np.max(Mu, axis=1)) 
-alpha= 2
-Mu_bulk  = np.ones((k,d))/d
+lnu = np.log(30/np.max(Mu, axis=1)) 
+alpha = 2
+Mu_bulk = np.ones((k, d))/d
 np.random.seed(42)
 X = mlx.gen_rv_dirimix(alpha, np.round(Mu,3),  wei, lnu,
-                       scale_weight_noise=1, Mu_bulk=Mu_bulk,
+                       scale_weight_noise=0, Mu_bulk=Mu_bulk,
                        index_weight_noise=alpha/2, size=n)
 
+# %% pairwise plot of generated data
 plt.figure(figsize=(10, 10))
-X_disp = X**(1/alpha) # for easier viz
+X_disp = X**(1/alpha)  # for easier viz only 
 max_val = np.max(X_disp)
 scatter = plt.scatter(X_disp[:, 0], X_disp[:, 1], alpha=0.5)
 plt.xlim(0, max_val)
 plt.ylim(0, max_val)
-# NB: exponent alpha/4 above is meant to help visualization only. may be removed.
 plt.xlabel('Feature 1')
 plt.ylabel('Feature d')
-plt.title('Scatter Plot of the  dataset')
+plt.title('Scatter Plot of the raw  dataset')
+plt.show()
+
+# %%  rank transformation of the generated data wit unit pareto margins
+# and visualization
+Xt = mlx.rank_transform(X)
+plt.figure(figsize=(10, 10))
+X_disp = Xt**(1/alpha)  # for easier viz only
+max_val = np.max(X_disp)
+scatter = plt.scatter(X_disp[:, 0], X_disp[:, 1], alpha=0.5)
+plt.xlim(0, max_val)
+plt.ylim(0, max_val)
+plt.xlabel('Feature 1')
+plt.ylabel('Feature d')
+plt.title('Scatter Plot of the  rank transformed dataset')
 plt.show()
 
 
-
 # %%
-# selecting k # not great. k too large. 
-# ratio_ext = np.linspace(0.01, 1, num=10)
-# pval, ratio_max = mlx.test_indep_radius_rest(Xt, y=None, ratio_ext=ratio_ext,
-#                                              norm_func=norm_func)
-# mlx.plot_indep_radius_rest(pval, ratio_ext, ratio_max, n)
+# selecting the radial threshold 
+ratio_ext = np.linspace(0.01, 0.2, num=10)
+pval, ratio_max = mlx.test_indep_radius_rest(Xt, y=None, ratio_ext=ratio_ext,
+                                             norm_func=norm_func)
+mlx.plot_indep_radius_rest(pval, ratio_ext, ratio_max, n)
+
+print(f'maximum ratio of extreme samples from rule-of-thumb \
+distance covariance test: {mlx.round_signif(ratio_max, 2)}')
+
 
 # %% [markdown]
-#  ## Running DAMEX
+#  ## Threshold selection 
 
 # %%
-Xt = mlx.rank_transform(X)
-ratio_extremes = 0.02
+# setting radial threshold for selection of extreme samples: 
+ratio_extremes = ratio_max / 2
 norm_Xt = norm_func(Xt)
 threshold = np.quantile(norm_Xt, 1 - ratio_extremes) # radial threshold
-# Beware the following is not k. it is comprised between k and d * k. 
+# Beware the following is not 'k' from . it is comprised between k and d * k. 
 number_extremes = np.sum(norm_Xt >= threshold)
-epsilon = 0.15  # damex 'distance to subface' tolerance parameter
-#min min number of  samples per retained face / number of extremes
+# damex 'distance to subface' tolerance parameter:
+epsilon = 0.1  
+# min number of  samples per retained face / number of extremes:
 min_ratio_per_subface = 0.005 
 min_counts = int(min_ratio_per_subface * number_extremes)
 
+# %% [markdown]
+# Visualization of rank-transformed data and thresholds
 
+#%%
 Xt_disp = Xt**(1/4)
 thresh_disp = threshold**(1/4)
 eps_thresh_disp = (epsilon * threshold)**(1/4)
@@ -135,7 +130,7 @@ plt.plot([thresh_disp, thresh_disp], [0, thresh_disp], c='blue',
          label='radial threshold')
 plt.plot([0, thresh_disp], [thresh_disp, thresh_disp], c='blue')
 plt.plot([thresh_disp, max_val], [eps_thresh_disp, eps_thresh_disp], c='red',
-         label='tolerance ditance-to-subface threshold')
+         label='tolerance distance-to-subface threshold')
 plt.plot([eps_thresh_disp, eps_thresh_disp], [thresh_disp, max_val], c='red')
 plt.xlabel('Feature 1')
 plt.ylabel('Feature d')

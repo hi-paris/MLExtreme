@@ -1,6 +1,7 @@
 import itertools as it
 import numpy as np
-import utilities as ut
+from . import utilities as ut
+#import utilities as ut
 
 
 #############
@@ -10,7 +11,7 @@ import utilities as ut
 
 def clef(x_norm, radius, kappa_min):
     """Return maximal faces s.t. kappa > kappa_min."""
-    x_bin = ut.above_radius_bin(x_norm, radius)
+    x_bin = ut.binary_large_features(x_norm, radius)
     faces_dict = find_faces(x_bin, kappa_min)
     faces = find_maximal_faces(faces_dict)
 
