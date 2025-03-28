@@ -436,7 +436,9 @@ def plot_pdf_dirimix_3D(Mu,  wei, lnu,  n_points=500):
     plt.show()
 
 
-# Multivariate symmetric logistic Model
+# ##############################################
+# ## Multivariate symmetric / asymmetric logistic Model
+# ##############################################
 def gen_PositiveStable(alpha, size=1):
     """
     Generate positive stable random variables.
@@ -466,7 +468,7 @@ def gen_PositiveStable(alpha, size=1):
 
 def gen_multilog(dim, alpha, size=1):
     """
-    Generate multivariate logistic random variables.
+    Generate multivariate symmetric logistic random variables.
 
     Parameters:
     -----------
@@ -490,6 +492,10 @@ def gen_multilog(dim, alpha, size=1):
         Result[:, ii] = (S / W[:, ii]) ** alpha
     return Result
 
+
+# ###########################################
+# ### Prediction of a missing component
+# ###########################################
 
 def transform_target_lin(y, X, norm_func):
     """
@@ -550,7 +556,7 @@ def inv_transform_target_nonlin(y, X, norm_order):
     return predicted_x
 
 # %% 
-def test_indep_radius_rest(X,  y, ratio_ext, norm_func,
+def test_indep_radius_rest(X, y, ratio_ext, norm_func,
                            random_state=np.random.randint(10**5)):
     from dcor.independence import distance_covariance_test
     from dcor.independence import distance_correlation_t_test

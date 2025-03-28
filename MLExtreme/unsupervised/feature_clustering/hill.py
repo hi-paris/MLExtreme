@@ -68,7 +68,7 @@ def find_faces_hill(x_rank, x_bin_k, x_bin_kp, x_bin_km, delta, k, var_max, verb
     while len(faces_dict[size]) > size:
         # print(size, ':', len(faces_dict[size]))
         faces_dict[size + 1] = []
-        faces_to_try = ut.candidate_faces(faces_dict[size], size, dim)
+        faces_to_try = ut.candidate_subfaces(faces_dict[size], size, dim)
         if faces_to_try:
             for face in faces_to_try:
                 rho = ut.rho_value(x_bin_k, face, k)

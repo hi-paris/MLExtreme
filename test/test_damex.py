@@ -20,7 +20,7 @@ X_test = np.array([
 bin_array = mlx.binary_large_features(X_test, radius, epsilon=epsilon)
 bin_array
 faces, counts = mlx.damex_0(bin_array)
-# faces_dict = mlx.list_to_dict_size(faces) # # order faces by their dimension: usage??
+
 faces2, limit_mass = mlx.damex(X_test, radius, epsilon=epsilon, min_counts=0,
                                standardize=False)
 
@@ -32,3 +32,10 @@ print(faces)
 print(faces2)
 print(counts)
 print(limit_mass)
+
+Xt = mlx.rank_transform(X_test)
+
+clef_faces = mlx.clef(Xt, 3, 0.1)
+
+clef_faces
+faces

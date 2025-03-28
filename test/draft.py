@@ -1,7 +1,7 @@
 # %%
 # # Set working directory if necessary
-# import os
-# os.getcwd()
+ import os
+ os.getcwd()
 # #os.chdir("../")
 
 # %% 

@@ -1,7 +1,7 @@
 import itertools as it
 import numpy as np
 from . import utilities as ut
-#import utilities as ut
+# import utilities as ut
 
 
 #############
@@ -46,6 +46,10 @@ def faces_init(x_bin, mu_0):
     return asymptotic_pair
 
 
+def compute_beta(x_bin, face):
+    return np.sum(np.sum(x_bin[:, face], axis=1) > len(face)-2)
+
+
 def kappa(x_bin, face):
     """Returns kappa value.
 
@@ -62,17 +66,6 @@ def kappa(x_bin, face):
     return kap
 
 
-def compute_beta(x_bin, face):
-    return np.sum(np.sum(x_bin[:, face], axis=1) > len(face)-2)
-
-
-def khi(binary_data, face):
-    face_vect_tmp = binary_data[:, face]
-    face_exist = float(np.sum(np.sum(face_vect_tmp, axis=1) > 0))
-    all_face = np.sum(np.prod(face_vect_tmp, axis=1))
-
-    return all_face/face_exist
-
 
 def find_faces(x_bin, kappa_min):
     """Returns all faces s.t. kappa > kappa_min."""
@@ -84,7 +77,7 @@ def find_faces(x_bin, kappa_min):
     while len(faces_dict[size]) > size:
         # print(size, ':', len(faces_dict[size]))
         faces_dict[size + 1] = []
-        faces_to_try = ut.candidate_faces(faces_dict[size], size, dim)
+        faces_to_try = ut.candidate_subfaces(faces_dict[size], size, dim)
         if faces_to_try:
             for face in faces_to_try:
                 if kappa(x_bin, face) > kappa_min:
@@ -115,47 +108,3 @@ def find_maximal_faces(faces_dict, lst=True):
 
     return maximal_faces
 
-
-############################
-# faces frequency analysis #
-############################
-
-
-def init_freq(x_bin_k, k, f_min):
-    """Return all faces of size 2 s.t. frequency > f_min."""
-    dim = x_bin_k.shape[1]
-    faces = []
-    for (i, j) in it.combinations(range(dim), 2):
-        face = [i, j]
-        r_alph = ut.rho_value(x_bin_k, face, k)
-        if r_alph > f_min:
-            faces.append(face)
-
-    return faces
-
-
-def find_faces_freq(x_bin_k, k, f_min):
-    """Return all faces s.t. frequency > f_min."""
-    dim = x_bin_k.shape[1]
-    faces_pairs = init_freq(x_bin_k, k, f_min)
-    size = 2
-    faces_dict = {}
-    faces_dict[size] = faces_pairs
-    while len(faces_dict[size]) > size:
-        faces_dict[size + 1] = []
-        faces_to_try = ut.candidate_faces(faces_dict[size], size, dim)
-        if faces_to_try:
-            for face in faces_to_try:
-                r_alph = ut.rho_value(x_bin_k, face, k)
-                if r_alph > f_min:
-                    faces_dict[size + 1].append(face)
-        size += 1
-
-    return faces_dict
-
-
-def freq_0(x_bin_k, k, f_min):
-    """Return maximal faces s.t. frequency > f_min."""
-    faces_dict = find_faces_freq(x_bin_k, k, f_min)
-
-    return find_maximal_faces(faces_dict)

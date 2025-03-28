@@ -5,7 +5,7 @@ from ...utils.EVT_basics import rank_transform
 import pdb
 
 
-###    TEMPORARY: ORIGINAL VERSION: singleton faces are discarded. 
+
 def damex_0(binary_matrix):
     """Analyzes a binary matrix to determine the number of points per subface.
 
@@ -75,10 +75,13 @@ def damex_0(binary_matrix):
     subfaces = [list(np.nonzero(binary_matrix[list(subface_sample_count)[i], :])[0])
                 for i in sorted_indices]
 
+    converted_subfaces = [[int(item) for item in sublist]
+                          for sublist in subfaces]
+
     # Create an array of the number of samples covered by each subface
     counts = [list(subface_sample_count.values())[i] for i in sorted_indices]
 
-    return subfaces, np.array(counts)
+    return converted_subfaces, np.array(counts)
 
 
 def damex(data, radial_threshold, epsilon, min_counts=0, standardize=True):
@@ -152,30 +155,4 @@ def damex(data, radial_threshold, epsilon, min_counts=0, standardize=True):
     
     # Return faces with mass greater than or equal to min_points
     return truncated_faces, truncated_mass_estimator
-
-
-## USEFUL? for CLEF? 
-def list_to_dict_size(faces_list):
-    """Converts a list of faces into a dictionary where keys are face
-    sizes and values are lists of faces.
-
-    Parameters:
-
-    - faces_list (list of lists): A list where each element is a list
-      of points representing a face.
-
-    Returns:
-
-    - dict: A dictionary where the key is the size of the face and the
-      value is a list of faces of that size.
-
-    """
-    # Initialize dictionary with sizes ranging from 2 to the maximum face size
-    faces_dict = {size: [] for size in range(2, max(map(len, faces_list)) + 1)}
-
-    # Populate the dictionary with faces based on their sizes
-    for face in faces_list:
-        faces_dict[len(face)].append(face)
-
-    return faces_dict
 
