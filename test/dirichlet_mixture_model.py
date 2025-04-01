@@ -124,7 +124,7 @@ alpha = 2.5  # Shape parameter of the Pareto distribution
 # Mixture means (Mu), log scale (lnu), and weights (wei)
 Mu = np.array([[0.2, 0.8], [0.8, 0.2], [0.5, 0.5]])  # k* p matrix of means
 lnu = np.log(20) * np.ones(k)  # log(10) for both components
-wei = np.array([0.5, 0.2, 0.3])  # weights for the mixture components
+wei = np.array([0.5, 0.2, 0.03])  # weights for the mixture components
 Mu, wei = mlx.normalize_param_dirimix(Mu, wei)
 # inspect the angular density
 Mu_wei = wei  @ Mu
@@ -133,20 +133,31 @@ print(Mu_wei)
 mlx.plot_pdf_dirimix_2D(Mu, wei, lnu)
 
 # Generate the dataset using the gen_rv_dirimix function
-X = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, index_weight_noise=0.5**alpha,
+# as an adversarial (bulk) angular parameter, choose center of the simplex 
+X = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, index_weight_noise=3,
+                       Mu_bulk=(np.ones(p)/p).reshape(1, p),
+                       wei_bulk = np.ones(1),
+                       lnu_bulk= np.ones(1) * np.log(2), 
                        size=n)
 
-# Plotting the dataset (2D plot)
-plt.figure(figsize=(8, 6))
-plt.scatter(X[:, 0], X[:, 1], color='grey', alpha=0.5)
-plt.xlabel('X1')
-plt.ylabel('X2')
-# Calculate the equal axis limit based on the maximum range
-max_range = max(np.max(X[:, 0]), np.max(X[:, 1]))
-# Set both axes to have the same scale
-plt.xlim(0, max_range)
-plt.ylim(0, max_range)
-plt.title('2D Scatter Plot of Generated Points')
+# Plotting the dataset (2D plot), rescale for easier visualization
+X_disp = X**(alpha/4)
+idex = np.sum(X**alpha, axis=1) > 10
+fig, axs = plt.subplots(1, 2, figsize=(8, 4)) 
+axs[0].scatter(X_disp[:, 0], X_disp[:, 1], color='grey', alpha=0.5)
+axs[0].set_xlabel('X1')
+axs[0].set_ylabel('X2')
+max_range = max(np.max(X_disp[:, 0]), np.max(X_disp[:, 1]))
+axs[0].set_xlim(0, max_range)
+axs[0].set_ylim(0, max_range)
+axs[0].set_title('2D Scatter Plot of Generated Points')
+axs[1].scatter(X_disp[idex, 0], X_disp[idex, 1], color='grey', alpha=0.5)
+axs[1].set_xlabel('X1')
+axs[1].set_ylabel('X2')
+max_range = max(np.max(X_disp[idex, 0]), np.max(X_disp[idex, 1]))
+axs[1].set_xlim(0, max_range)
+axs[1].set_ylim(0, max_range)
+axs[1].set_title('2D Scatter Plot of Extreme Generated Points')
 plt.show()
 
 # Example usage p = 3

@@ -1,13 +1,15 @@
 # from scipy import stats as stat
 # from scipy.stats import pareto
 import numpy as np
+import random 
 from .EVT_basics import gen_dirimix, normalize_param_dirimix
 
 
 def gen_rv_dirimix(alpha=1, Mu=np.array([[0.5,  0.5]]),
                    wei=np.array([1]), lnu=np.array([2]),
                    scale_weight_noise=1,
-                   index_weight_noise=None, Mu_bulk=None, size=1):
+                   index_weight_noise=None, Mu_bulk=None, wei_bulk=None,
+                   lnu_bulk=None, size=1):
     """
     Generate `n` points where each point `X_i = R_i * Theta_i`.
 
@@ -47,6 +49,7 @@ def gen_rv_dirimix(alpha=1, Mu=np.array([[0.5,  0.5]]),
     R = np.random.pareto(alpha, size=n)+1
     Theta = gen_dirimix(Mu=Mu,  wei=wei, lnu=lnu, size=n)
     dim = np.shape(Mu)[1]
+    k_comp = np.shape(Mu)[0]
     # if Mu_bulk is None:
     #     Mu_bulk = (1 - Mu)/(dim - 1)
     if Mu_bulk is None:
@@ -54,7 +57,13 @@ def gen_rv_dirimix(alpha=1, Mu=np.array([[0.5,  0.5]]),
         r_0 = np.sum(Mu_bulk_0, axis=1)
         Mu_bulk = Mu_bulk_0 / r_0.reshape(-1, 1)
 
-    Noise = gen_dirimix(Mu=Mu_bulk, wei=wei, lnu=lnu, size=n)
+    if wei_bulk is None:
+        wei_bulk = wei #np.ones(k_comp)/k_comp
+
+    if lnu_bulk is None:
+        lnu_bulk = lnu[::-1]
+        
+    Noise = gen_dirimix(Mu=Mu_bulk, wei=wei_bulk, lnu=lnu_bulk, size=n)
     # gen_dirichlet(n, ) np.ones((n, np.shape(Mu)[0])))
     w = np.minimum(1,  (scale_weight_noise/R) ** (index_weight_noise))
     newTheta = (1 - w[:, np.newaxis]) * Theta + w[:, np.newaxis] * Noise
@@ -374,3 +383,97 @@ def gen_rv_functional_data_gaussianNoise(num_samples, grid, alpha, sd,
                     (np.sqrt(2) * np.cos(2 * np.pi * om6 * grid))[None, :])
 
     return result
+
+# ######
+# subface generation for feature clustering
+# #####
+# #################
+# Generate subfaces #
+# #################
+
+def gen_subfaces(dimension, num_subfaces, max_size=8,
+                 p_geometric=0.25,
+                 prevent_inclusions=True,
+       ##          include_singletons=True,
+                 seed=None):
+    """
+    Generates a list of random subsets of {1,...,dimension}.
+
+    Args:
+    - dimension (int): Dimensionality of the ambient space. 
+    - num_subfaces (int): Number of subfaces of size >=2 to generate. 
+    - max_size (int): Maximum size of a subface.
+    - p_geometric (float): parameter for the geometric distribution ruling the
+        size of subfaces.
+    ###- include_singletons (bool): Whether to include singleton subfaces.
+
+    Returns:
+    - list: List of generated subfaces.
+    """
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+        
+    # create a matrix of subfaces    
+    subfaces = np.zeros((num_subfaces, dimension))
+    # subface_size = min(np.random.geometric(p_geometric) + 1, max_size)
+    # subfaces[0, random.sample(range(dimension), subface_size)] = 1
+    count = 0
+    loop_count = 0    
+    while count < num_subfaces and loop_count < 1e4:
+        subface_size = min(np.random.geometric(p_geometric) + 1, max_size)
+        subface = np.zeros(dimension)
+        subface_indices = random.sample(range(dimension), subface_size)
+        subface[subface_indices] = 1
+        if count >= 1:
+            valid_cond = (not prevent_inclusions) or (
+                # subface is not a subset of one of subfaces 
+                (np.sum(np.prod(subfaces[:count] * subface == subface, axis=1)
+                        ) == 0) and (
+                            # subface is not a superset either
+                            np.sum(np.prod(
+                                subfaces[:count] * subface == subfaces[:count],
+                                axis=1)) == 0))
+        else:
+            valid_cond = True
+        if valid_cond:
+            subfaces[count, subface_indices] = 1
+            count += 1
+        loop_count += 1
+        
+    idkeep = np.sum(subfaces, axis=1) > 0
+    subfaces = subfaces[idkeep]
+    # convert the subfaces matrix to a list
+    subfaces_list = [list(np.nonzero(f)[0]) for f in subfaces]
+    # features = list({int(j) for subface in subfaces_list for j in subface})
+
+    # Each feature must be in at least one subface because otherwise
+    # the associated random vector (dataset) cannot have standardized
+    # components (columns). The last step is to add potentially
+    # missing features:
+    
+    missing_features = list(set(
+        range(dimension)) - {j for subface in subfaces_list
+                             for j in subface})
+    # singletons = []
+    
+    if missing_features:
+ #       if include_singletons:
+        # singletons = [[int(j)] for j in missing_features]
+        for j in missing_features:
+            subfaces_list.append([int(j)])
+        # else:
+        #     if len(missing_features) > 1:
+        #         subfaces_list.append(missing_features)
+        #     if len(missing_features) == 1:
+        #         missing_features.append(list(set(range(dimension)) -
+        #                                      set(missing_features))[0])
+        #         subfaces_list.append(missing_features)
+
+    converted_subfaces = [[int(item) for item in sublist]
+                          for sublist in subfaces_list]
+
+    # if include_singletons:
+    #     return converted_subfaces, features, singletons
+    return converted_subfaces
+

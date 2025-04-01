@@ -3,7 +3,8 @@ from .dataset_generation import (
     gen_classif_data_diriClasses,
     gen_target_CovariateRV,
     gen_rv_functional_data,
-    gen_rv_functional_data_gaussianNoise
+    gen_rv_functional_data_gaussianNoise,
+    gen_subfaces
 )
 
 from .EVT_basics import (

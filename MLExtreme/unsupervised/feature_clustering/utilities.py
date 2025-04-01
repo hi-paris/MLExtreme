@@ -1,8 +1,32 @@
 from __future__ import division
-import random as rd
-import itertools as it
+# import random as rd
 import numpy as np
-import networkx as nx
+from ...utils.EVT_basics import rank_transform
+# from .ftclust_analysis import subfaces_list_to_matrix
+
+
+def subfaces_list_to_matrix(subfaces, dimension=None):
+    """
+    Converts a list of subfaces into a binary matrix.
+
+    Args:
+    - subfaces (list): List of subfaces.
+
+    Returns:
+    - np.ndarray: Binary matrix representation of subfaces.
+    """
+    num_subfaces = len(subfaces)
+
+    if dimension is None:
+        features = list({j for subface in subfaces for j in subface})
+        dimension = int(max(features))+1
+
+    matrix_subfaces = np.zeros((num_subfaces, dimension))
+
+    for subface_index, subface in enumerate(subfaces):
+        matrix_subfaces[subface_index, subface] = 1
+
+    return matrix_subfaces # [:, np.sum(matrix_subfaces, axis=0) > 0]
 
 
 def remove_zero_rows(binary_array):
@@ -68,178 +92,65 @@ def binary_large_features(std_data, radial_threshold, epsilon=None):
         binary_matrix = std_data >= radial_threshold
 
     # Convert the binary matrix to float type and remove zero rows
-    return remove_zero_rows(binary_matrix.astype(float))
+    return remove_zero_rows(binary_matrix.astype(int))
+ 
+
+def estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
+                        standardize=True):
+    if standardize:
+        x_norm = rank_transform(X)
+    else:
+        x_norm = X
+    x_bin = binary_large_features(x_norm, threshold, epsilon)
+    dimension = np.shape(x_bin)[1]
+    mass_list = []
+    subfaces_matrix = subfaces_list_to_matrix(subfaces_list, dimension)
+    #pdb.set_trace()
+    for k in range(len(subfaces_list)):
+        subface = subfaces_matrix[k]
+        shared_features = np.dot(x_bin, subface.reshape(-1, 1)) #(num_extremes,1)
+        num_features_samples = np.sum(x_bin, 1).reshape(-1,1) #(num_extremes,1)
+        num_features_subface = np.sum(subface) #int 
+        sample_superset_of_subface = num_features_subface == shared_features
+        sample_subset_of_subface = num_features_samples == shared_features
+        sample_equal_subface = sample_subset_of_subface * \
+            sample_superset_of_subface
+        counts_subface = np.sum(sample_equal_subface)
+        mass = threshold * counts_subface / X.shape[0]
+        mass_list.append(float(mass))
+        
+    return mass_list
 
 
-# #################
-# Generate Candidate Subfaces of Increased Size at Each CLEF Iteration
-# #################
+# %%
+def entropy(masses, total_mass = None):
+    k = len(masses)
+    # if k == 0:
+    #     raise Exception("empty list found by damex")
+    #     # pdb.set_trace()
+    if k <= 1:
+        return 0
+    if isinstance(masses, list):
+        masses = np.array(masses)
+    # if total_mass is not None:
+    #     missing_mass = total_mass - np.sum(masses)
+    #     if missing_mass < -1e-7:
+    #         raise ValueError('total mass should exceed sum of masses')
+    #     if missing_mass > 0:
+    #         masses = np.append(masses, missing_mass)
+        
+    # distrib = masses[masses > 0] / (np.sum(masses) + missing_mass)
+    if total_mass is None:
+        total_mass = np.sum(masses)
 
-def list_subfaces_to_bin_matrix(subfaces, dimension):
-    """
-    Converts a list of subface indices into a binary matrix.
+    distrib = masses[masses > 0] / total_mass
+    log_distrib = np.log(distrib)
+    neg_product = - distrib * log_distrib
+    return np.sum(neg_product)  # / np.log(k)
 
-    Args:
-    - subfaces (list): List of subfaces.
-    - dimension (int): Dimensionality of the ambient space.
-
-    Returns:
-    - np.ndarray: Binary matrix representation of subfaces.
-    """
-    num_subfaces = len(subfaces)
-    vector_subfaces = np.zeros((num_subfaces, dimension))
-
-    for subface_index, subface in enumerate(subfaces):
-        vector_subfaces[subface_index, subface] = 1.0
-
-    return vector_subfaces
-
-
-def make_graph(subfaces, size, dimension):
-    """
-    Creates a graph where nodes represent subfaces and edges exist if subfaces
-    differ by at most one feature.
-
-    It is the main building block of the `candidate_sufaces' function
-    used in CLEF and variants [1,2].
-
-    Args:
-    - subfaces (list): List of subfaces.
-    - size (int): Size of the subfaces.
-    - dimension (int): Dimensionality of the subfaces.
-
-    Returns:
-    - nx.Graph: Graph representation of subfaces.
-
-    References
-    -----------
-
-    [1] Chiapino, M., & Sabourin, A. (2016,September). Feature clustering
-    for extreme events analysis, with application to extreme stream-flow data.
-    In International workshop on new frontiers in mining complex patterns
-    (pp. 132-147). Cham: Springer International Publishing.
-    
-    [2] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-    """
-    vector_subfaces = list_subfaces_to_bin_matrix(subfaces, dimension)
-    num_subfaces = len(vector_subfaces)
-    graph = nx.Graph()
-    nodes = range(num_subfaces)
-    graph.add_nodes_from(nodes)
-    edges = np.nonzero(np.triu(
-        np.dot(vector_subfaces, vector_subfaces.T) == size - 1))
-    graph.add_edges_from([(edges[0][i], edges[1][i])
-                          for i in range(len(edges[0]))])
-
-    return graph
-
-
-def candidate_subfaces(subfaces, size, dimension):
-    """Generates a list A_{s+1} of candidate subfaces of size s+1
-    from a list A_s = `subfaces' of subfaces of size s, with `s=size`.
-    Candidate subfaces are all subfaces of size s+1 which are
-    supersets of each of subface of size s in the current list
-    `subfaces'.
-
-    This is a key step in CLEF algorithm [1] and variants [2]
-
-    Args:
-    - subfaces (list): List of subfaces.
-    - size (int): Size of the subfaces.
-    - dimension (int): Dimensionality of the subfaces.
-
-    Returns:
-    - list: List of candidate subfaces.
-
-    References
-    -----------
-
-    [1] Chiapino, M., & Sabourin, A. (2016,September). Feature clustering
-    for extreme events analysis, with application to extreme stream-flow data.
-    In International workshop on new frontiers in mining complex patterns
-    (pp. 132-147). Cham: Springer International Publishing.
-    
-    [2] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-
-    """
-    graph = make_graph(subfaces, size, dimension)
-    candidate_subfaces_list = []
-    cliques = list(nx.find_cliques(graph))
-    indices_to_try = np.nonzero(np.array(
-        list(map(len, cliques))) == size + 1)[0]
-
-    for index in indices_to_try:
-        clique_features = set([])
-        for subface_index in range(len(cliques[index])):
-            clique_features = clique_features | set(
-                subfaces[cliques[index][subface_index]])
-        clique_features = list(clique_features)
-        if len(clique_features) == size + 1:
-            candidate_subfaces_list.append(clique_features)
-
-    return candidate_subfaces_list
-
-
-# ###########################
-# Subfaces frequency analysis #
-# ###########################
-
-
-def rho_value(binary_matrix, subface, k):
-    """
-    Calculates the rho value of a subface.
-    (notation r_a(1) in [1], where a is the subface)
-
-    Args:
-    - binary_matrix (np.ndarray): Binary matrix.
-    - subface (list): Subface to evaluate.
-    - k (int): Number of samples.
-
-    Returns:
-    - float: Rho value.
-
-    References
-    -----------
-    
-    [1] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-
-    """
-    return np.sum(np.sum(
-        binary_matrix[:, subface], axis=1) == len(subface)) / float(k)
-
-
-def partial_matrix(base_matrix, partial_matrix, column_index):
-    """
-    Replaces the column_index column of base_matrix with the corresponding
-    column from partial_matrix.
-
-    Used in asymptotic variants of CLEF [1] to compute partial derivatives
-    of the 'kappa' and the 'r' functions
-
-    Args:
-    - base_matrix (np.ndarray): Base matrix.
-    - partial_matrix (np.ndarray): Partial matrix.
-    - column_index (int): Index of the column to replace.
-
-    Returns:
-    - np.ndarray: Modified matrix.
-    
-    References
-    -----------
-    
-    [1] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-
-    """
-    matrix_copy = np.copy(base_matrix)
-    matrix_copy[:, column_index] = partial_matrix[:, column_index]
-
-    return matrix_copy
-
+def AIC_clustering(masses, number_extremes, total_mass=None):
+    k = len(masses)
+    if k <= 1:
+        return 0
+    negllkl = number_extremes * entropy(masses, total_mass=total_mass)
+    return negllkl + k

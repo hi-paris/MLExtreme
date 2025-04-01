@@ -1,44 +1,18 @@
 from __future__ import division
-import random as rd
+#import random as rd
 import itertools as it
 import numpy as np
 # import networkx as nx
 from . import utilities as ut
 from . import clef
+from . import ftclust_analysis as fca # setDistance_subface_to_matrix
 
 
+
+
+
+# #  BELOW THIS POINT: 
 # ## CONTAINS FUNCTIONS THAT ARE CURRENTLY UNUSED
-
-# ################################
-# ##### previously in damex
-
-
-# USEFUL? for CLEF? 
-def list_to_dict_size(faces_list):
-    """Converts a list of faces into a dictionary where keys are face
-    sizes and values are lists of faces.
-
-    Parameters:
-
-    - faces_list (list of lists): A list where each element is a list
-      of points representing a face.
-
-    Returns:
-
-    - dict: A dictionary where the key is the size of the face and the
-      value is a list of faces of that size.
-
-    """
-    # Initialize dictionary with sizes ranging from 2 to the maximum face size
-    faces_dict = {size: [] for size in range(2, max(map(len, faces_list)) + 1)}
-
-    # Populate the dictionary with faces based on their sizes
-    for face in faces_list:
-        faces_dict[len(face)].append(face)
-
-    return faces_dict
-
-
 # ###################################
 # ### previously in utilities.py
 
@@ -63,7 +37,6 @@ def kth_largest_binary_matrix(rank_matrix, k):
     return binary_matrix
 
 
-
 def check_errors(true_subfaces, result_subfaces, dimension):
     """
     Compares true subfaces with result subfaces to identify recovered, missed,
@@ -78,48 +51,77 @@ def check_errors(true_subfaces, result_subfaces, dimension):
     - tuple: Lists of recovered, missed, false positives, exact subsets,
              and exact supersets.
     """
+    # Convert lists of subfaces into binary matrices where each row represents
+    # a subface
     true_subfaces_matrix = ut.list_subfaces_to_vector(true_subfaces, dimension)
     result_subfaces_matrix = ut.list_subfaces_to_vector(result_subfaces,
                                                         dimension)
 
+    # Calculate condition_1: Check if each result subface is a superset of any
+    # true subface. This is done by checking if the dot product of result and
+    # true subfaces equals the sum of true subfaces
     condition_1 = np.dot(result_subfaces_matrix, true_subfaces_matrix.T) == \
         np.sum(true_subfaces_matrix, axis=1)
+
+    # Calculate condition_2: Check if each true subface is a subset of any
+    # result subface. This is done by checking if the dot product of true and
+    # result subfaces equals the sum of result subfaces
     condition_2 = np.dot(true_subfaces_matrix, result_subfaces_matrix.T) == \
         np.sum(result_subfaces_matrix, axis=1)
 
+    # Identify exact supersets: Result subfaces that are supersets of true
+    # subfaces but not exact matches
     exact_supersets = list(set(np.nonzero(np.sum(condition_1, axis=1))[0]) -
                            set(np.nonzero(np.sum(condition_1 * condition_2.T,
                                                  axis=1))[0]))
+
+    # Identify exact subsets: Result subfaces that are subsets of true
+    # subfaces but not exact matches
     exact_subsets = list(set(np.nonzero(np.sum(condition_2.T, axis=1))[0]) -
                          set(np.nonzero(np.sum(condition_1 * condition_2.T,
                                                axis=1))[0]))
+
+    # Identify pure false positives: Result subfaces that are neither subsets
+    # nor supersets of true subfaces
     pure_false_indices = list(set(range(len(result_subfaces))) -
-                              (set(np.nonzero(np.sum(
-                                  condition_1 * condition_2.T,
-                                  axis=1))[0]) |
+                              (set(np.nonzero(np.sum(condition_1 * condition_2.T,
+                                                     axis=1))[0]) |
                                set(exact_supersets) | set(exact_subsets)))
 
+    # Recovered subfaces: Result subfaces that exactly match true subfaces
     recovered_subfaces = [result_subfaces[i] for i in
                           np.nonzero(np.sum(condition_1 * condition_2.T,
                                             axis=1))[0]]
-    false_positives = [result_subfaces[i] for i in pure_false_indices]
-    exact_subsets_subfaces = [result_subfaces[i] for i in exact_subsets]
-    exact_supersets_subfaces = [result_subfaces[i] for i in exact_supersets]
-    missed_subfaces = [true_subfaces[i] for i in
-                       np.nonzero(np.sum(condition_1 * condition_2.T,
-                                         axis=0) == 0)[0]]
 
+    # False positives: Result subfaces that do not match any true subfaces
+    false_positives = [result_subfaces[i] for i in pure_false_indices]
+
+    # Exact subset subfaces: Result subfaces that are exact subsets of true
+    # subfaces
+    exact_subsets_subfaces = [result_subfaces[i] for i in exact_subsets]
+
+    # Exact superset subfaces: Result subfaces that are exact supersets of true
+    # subfaces
+    exact_supersets_subfaces = [result_subfaces[i] for i in exact_supersets]
+
+    # Missed subfaces: True subfaces that do not match any result subfaces
+    missed_subfaces = [true_subfaces[i] for i in
+                       np.nonzero(np.sum(condition_1 * condition_2.T, axis=0) == 0)[0]]
+
+    # Return the categorized subfaces
     return recovered_subfaces, missed_subfaces, false_positives, \
         exact_subsets_subfaces, exact_supersets_subfaces
 
 
+
 # #####################
-# Levenshtein metric #
+# setDistance metric #
 # #####################
 
-def levenshtein_distance(subface_1, subface_2):
+def setDistance(subface_1, subface_2):
     """
-    Calculates the pseudo-Levenshtein distance between two subfaces.
+    Calculates the pseudo-Levenshtein distance between two
+    subfaces encoded with binary entries.
 
     Args:
     - subface_1 (np.ndarray): First subface vector.
@@ -127,42 +129,15 @@ def levenshtein_distance(subface_1, subface_2):
 
     Returns:
     - float: Pseudo-Levenshtein distance.
+
     """
     return np.sum(abs(subface_1 - subface_2)) / np.sum(
         subface_1 + subface_2 > 0)
 
 
-def levenshtein_distance_matrix(subface_1, subfaces):
-    """
-    Calculates the pseudo-Levenshtein distance between one subface and a
-    matrix of subfaces.
-
-    Args:
-    - subface_1 (np.ndarray): Single subface vector.
-    - subfaces (np.ndarray): Matrix of subface vectors.
-
-    Returns:
-    - np.ndarray: Array of distances.
-    """
-    return (np.sum(abs(subface_1 - subfaces), axis=1) /
-            np.sum(subface_1 + subfaces > 0, axis=1))
 
 
-def levenshtein_similarity_matrix(binary_matrix):
-    """
-    Computes the pseudo-Levenshtein similarity between each row of a
-    binary matrix.
-
-    Args:
-    - binary_matrix (np.ndarray): Binary matrix.
-
-    Returns:
-    - np.ndarray: Similarity matrix.
-    """
-    return levenshtein_distance_matrix_all(binary_matrix) - 1
-
-
-def levenshtein_distance_matrix_all(binary_matrix):
+def setDistance_matrix(binary_matrix):
     """
     Computes the pseudo-Levenshtein distance between each row of a
     binary matrix.
@@ -177,13 +152,29 @@ def levenshtein_distance_matrix_all(binary_matrix):
     distance_matrix = np.zeros((num_rows, num_rows))
 
     for row_index, row in enumerate(binary_matrix):
-        distance_matrix[row_index] = levenshtein_distance_matrix(row,
-                                                                 binary_matrix)
+        distance_matrix[row_index] = \
+            fca.setDistance_subface_to_matrix(row, binary_matrix)
 
     return distance_matrix
 
+def setDistance_similarity_matrix(binary_matrix):
+    """
+    Computes the pseudo-Levenshtein similarity between each row of a
+    binary matrix.
 
-def levenshtein_subfaces_radius(subfaces, radius, rank_matrix):
+    Args:
+    - binary_matrix (np.ndarray): Binary matrix.
+
+    Returns:
+    - np.ndarray: Similarity matrix.
+    """
+    return 1 - setDistance_matrix(binary_matrix)
+
+###BUG HERE? should be 1 - ?  --> modified. previously setDistance_matrix(binary_matrix) - 1
+
+
+
+def setDistance_subfaces_radius(subfaces, radius, rank_matrix):
     """
     Calculates the average pseudo-Levenshtein distance between a list of
     subfaces and rank matrix rows.
@@ -200,11 +191,12 @@ def levenshtein_subfaces_radius(subfaces, radius, rank_matrix):
                                                  dim=rank_matrix.shape[1])
     binary_matrix = ut.binary_large_features(rank_matrix, radius)
 
-    return np.mean([np.min(levenshtein_distance_matrix(row, subfaces_vector))
+    return np.mean([np.min(
+        fca.setDistance_subface_to_matrix(row, subfaces_vector))
                     for row in binary_matrix])
 
 
-def levenshtein_subfaces_radii(subfaces, radii, rank_matrix, eps=1.0):
+def setDistance_subfaces_radii(subfaces, radii, rank_matrix, eps=1.0):
     """
     Calculates the average pseudo-Levenshtein distance for different radii.
 
@@ -226,73 +218,12 @@ def levenshtein_subfaces_radii(subfaces, radii, rank_matrix, eps=1.0):
         binary_matrix = ut.binary_large_features(rank_matrix, radius, eps)
         for row in binary_matrix:
             distances.append(np.min(
-                levenshtein_distance_matrix(row, subfaces_vector)))
+                fca.setDistance_subface_to_matrix(row, subfaces_vector)))
         mean_distances.append(np.sum(distances) / len(binary_matrix))
         num_extracted.append(binary_matrix.shape[0])
 
     return mean_distances, num_extracted
 
-
-# #################
-# Generate subfaces #
-# #################
-
-def generate_random_subfaces(dimension, num_subfaces, max_size=8,
-                             p_geometric=0.25,
-                             include_singletons=False):
-    """
-    Generates a list of random subsets of {1,...,dimension}.
-
-    Args:
-    - dimension (int): Dimensionality of the subfaces.
-    - num_subfaces (int): Number of subfaces to generate.
-    - max_size (int): Maximum size of a subface.
-    - p_geometric (float): Probability parameter for geometric distribution.
-    - include_singletons (bool): Whether to include singleton subfaces.
-
-    Returns:
-    - list: List of generated subfaces.
-    """
-    subfaces = np.zeros((num_subfaces, dimension))
-    subface_size = min(np.random.geometric(p_geometric) + 1, max_size)
-    subfaces[0, rd.sample(range(dimension), subface_size)] = 1
-    count = 1
-    loop_count = 0
-
-    while count < num_subfaces and loop_count < 1e4:
-        subface_size = min(np.random.geometric(p_geometric) + 1, max_size)
-        subface = np.zeros(dimension)
-        subface_indices = rd.sample(range(dimension), subface_size)
-        subface[subface_indices] = 1
-
-        if np.sum(np.prod(subfaces[:count] * subface == subface, axis=1)) == 0:
-            if np.sum(np.prod(subfaces[:count] * subface == subfaces[:count],
-                              axis=1)) == 0:
-                subfaces[count, subface_indices] = 1
-                count += 1
-        loop_count += 1
-
-    subfaces_list = [list(np.nonzero(f)[0]) for f in subfaces]
-    features = list({j for subface in subfaces_list for j in subface})
-    missing_features = list(set(
-        range(dimension)) - {j for subface in subfaces_list
-                             for j in subface})
-    singletons = []
-
-    if missing_features:
-        if include_singletons:
-            singletons = [[j] for j in missing_features]
-        else:
-            if len(missing_features) > 1:
-                subfaces_list.append(missing_features)
-            if len(missing_features) == 1:
-                missing_features.append(list(set(range(dimension)) -
-                                             set(missing_features))[0])
-                subfaces_list.append(missing_features)
-
-    if include_singletons:
-        return subfaces_list, features, singletons
-    return subfaces_list
 
 
 def subfaces_complement(subfaces, dimension):
@@ -328,26 +259,6 @@ def dictionary_by_size(all_subfaces):
 
     return subfaces_dict
 
-
-def subfaces_to_matrix(subfaces):
-    """
-    Converts a list of subfaces into a binary matrix.
-
-    Args:
-    - subfaces (list): List of subfaces.
-
-    Returns:
-    - np.ndarray: Binary matrix representation of subfaces.
-    """
-    num_subfaces = len(subfaces)
-    features = list({j for subface in subfaces for j in subface})
-    max_feature = int(max(features))
-    matrix_subfaces = np.zeros((num_subfaces, max_feature + 1))
-
-    for subface_index, subface in enumerate(subfaces):
-        matrix_subfaces[subface_index, subface] = 1
-
-    return matrix_subfaces[:, np.sum(matrix_subfaces, axis=0) > 0]
 
 
 def subfaces_conversion(subfaces):

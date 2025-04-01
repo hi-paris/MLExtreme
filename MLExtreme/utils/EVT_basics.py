@@ -184,22 +184,22 @@ def rank_transform_test(x_train, x_test):
 
 
 def normalize_param_dirimix(Mu, wei):
-    """
-    Modifies the dirichlet centers matrix Mu and the weights wei for the Dirichlet
+    """Modifies the dirichlet centers matrix Mu and the weights wei for the Dirichlet
     mixture model in Pareto margins
 
-    Takes a matrix Mu (k,p) and a weights vector wei (,p),
-    and normalizes  both of them  so that
-    each column of the resulting matrix sums to 1, and the barycenter of
-    the rows with weights `wei` is (1/p, ... 1/p).
-    See Boldi & Davison, Sabourin & Naveau. 
-    The normalization is performed according to the method described in
-    Chiapino et al.
+    Takes a matrix Mu (k,p) and a weights vector wei (,k), and
+    normalizes them in order to satisfy moments constraint on the
+    angular distribution, which arised from Pareto-margins
+    standardization both of them so that each row of the resulting
+    Mu_modif matrix sums to 1, and the barycenter of the rows with
+    weights `wei_modif` is (1/p, ... 1/p).  See Boldi & Davison,
+    Sabourin & Naveau.  The normalization is performed according to
+    the method described in Chiapino et al.
 
     Parameters:
     -------------
     Mu (np.ndarray): A k x p matrix with positive entries, with rows summing to one. 
-    wei (np.ndarray): A weights vector of length p., with nonnegative entries,
+    wei (np.ndarray): A weights vector of length k., with nonnegative entries,
     summing to one. 
 
     Returns:
@@ -221,7 +221,7 @@ def normalize_param_dirimix(Mu, wei):
     """
     Rho = np.diag(wei) @ Mu
     p = Rho.shape[1]
-    Rho_csum = np.sum(Rho, axis=0) # length p
+    Rho_csum = np.sum(Rho, axis=0) # length p. Barycenter of the input.
     if any(x == 0 for x in Rho_csum):
         raise ValueError("One column of Mu is zero")
     Rho1 = Rho / (Rho_csum * p)  # Rho1 has columns summing to 1/p
