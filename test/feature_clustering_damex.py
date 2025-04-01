@@ -32,13 +32,13 @@ def norm_func(x):
 # support of the limit measure.
 
 # %%
-Plot = True
+Plot = False
 seed = 42
-dim = 10  # try 5, 20, 50, 100
-num_subfaces = 5 # try 5, 20, 50
+dim = 20  # try 5, 20, 50, 100
+num_subfaces = 50 # try 5, 20, 50
 subfaces_list = mlx.gen_subfaces(dimension=dim,
                                  num_subfaces=num_subfaces,
-                                 max_size=5, # try 4, 10, 20
+                                 max_size=6, # try 4, 10, 20
                                  prevent_inclusions=False,
                                  seed=seed)
 
@@ -243,8 +243,8 @@ if Plot:
 # ## DAMEX
 
 # %%
-single_train_damex = True  ## works well both with true and false
-single_test_damex= True
+single_train_damex = False  ## works well both with true and false
+single_test_damex= False
 faces, mass = mlx.damex(X, threshold, epsilon=epsilon, 
                         min_counts= 0,  # np.sqrt(number_extremes)/10,
                         standardize=True, include_singletons=single_train_damex)
@@ -265,12 +265,15 @@ if False:
 # %% [markdown]
 # Scoring (informed): here we leverage the knowledge of the 'true' subfaces
 
-estim_to_true_error = mlx.setDistance_error(faces, mass, faces_true,
-                                            reference_masses=wei_true,
-                                            dimension=dim)
-true_to_estim_error = mlx.setDistance_error(faces_true, wei_true, faces,
-                                            reference_masses=mass, 
-                                            dimension=dim)
+total_mass = threshold * number_extremes / n
+estim_to_true_error = mlx.setDistance_error_l2l(faces, mass, faces_true,
+                                                reference_masses=wei_true,
+                                                total_reference_mass=1,
+                                                dimension=dim)
+true_to_estim_error = mlx.setDistance_error_l2l(faces_true, wei_true, faces,
+                                                reference_masses=mass,
+                                                total_reference_mass=total_mass, 
+                                                dimension=dim)
 
 # goodness of fit, unsupervised
 # (in practice, no test set is available but cross-validation may be used instead)
@@ -278,10 +281,9 @@ true_to_estim_error = mlx.setDistance_error(faces_true, wei_true, faces,
 #bin_Xtest = mlx.binary_large_features(std_Xtest, threshold)
 
 
-total_mass = threshold * number_extremes / n
 damex_unsupervised_error = mlx.setDistance_subfaces_data(
     faces,  threshold, std_Xtest, include_singletons=single_test_damex,
-    epsilon=epsilon,masses=mass)
+    epsilon=epsilon, masses=mass, total_mass=total_mass)
 
 
 print(f'DAMEX set distance estimated_to_true_error: {estim_to_true_error}')
@@ -320,17 +322,18 @@ faces_wrong, mass_wrong = mlx.damex(X, threshold, epsilon=epsilon/10,
 # %% [markdown]
 # Scoring (informed): here we leverage the knowledge of the 'true' subfaces
 
-wrong_estim_to_true_error = mlx.setDistance_error(faces_wrong, mass_wrong,
-                                                  faces_true, wei_true,
-                                                  dimension=dim)
-wrong_true_to_estim_error = mlx.setDistance_error(faces_true, wei_true,
-                                                  faces_wrong, mass_wrong,
-                                                  dimension=dim)
+wrong_estim_to_true_error = mlx.setDistance_error_l2l(faces_wrong, mass_wrong,
+                                                      faces_true, wei_true, 1,
+                                                      dimension=dim)
+
+wrong_true_to_estim_error = mlx.setDistance_error_l2l(
+    faces_true, wei_true, faces_wrong, mass_wrong,
+    total_reference_mass=total_mass, dimension=dim)
 
 
 wrong_damex_unsupervised_error = mlx.setDistance_subfaces_data(
-    faces_wrong,  threshold, std_Xtest, include_singletons=single_test_damex,
-    epsilon=epsilon,masses=mass_wrong)
+    faces_wrong, threshold, std_Xtest, include_singletons=single_test_damex,
+    epsilon=epsilon, masses=mass_wrong, total_mass = total_mass)
 
 
 # print(f'DAMEX set distance estimated_to_true_error: {estim_to_true_error}')
@@ -398,11 +401,11 @@ for i in range(neps):
     damex_unsup_error_vect[i] = mlx.setDistance_subfaces_data(
         damex_faces_i,  threshold, std_Xtest,
         include_singletons=single_test_damex, 
-        epsilon=eps_vect[i], masses=mass_i) 
-    damex_superv_1 = mlx.setDistance_error(
-        damex_faces_i, mass_i, faces_true, wei_true, dimension=dim)
-    damex_superv_2 = mlx.setDistance_error(
-        faces_true, wei_true, damex_faces_i, mass_i, dimension=dim)
+        epsilon=eps_vect[i], masses=mass_i, total_mass=total_mass) 
+    damex_superv_1 = mlx.setDistance_error_l2l(
+        damex_faces_i, mass_i, faces_true, wei_true, 1, dimension=dim)
+    damex_superv_2 = mlx.setDistance_error_l2l(
+        faces_true, wei_true, damex_faces_i, mass_i, total_mass, dimension=dim)
     damex_superv_error_vect[i]  = max(damex_superv_1, damex_superv_2)
 
     
@@ -461,20 +464,22 @@ kappa_min = kappa_aic  # keep AIC selected kappa for further analysis
 # ## CLEF with selected threshold and kappa_min
 
 # %
-single_train_clef = True # should CLEF take into account singleton features?
-single_test_clef = True
+single_train_clef = False # should CLEF take into account singleton features?
+single_test_clef = False
 clef_faces = mlx.clef(X, threshold, kappa_min, standardize=True,
                       include_singletons=single_train_clef)
 
 clef_mass = mlx.clef_estim_subfaces_mass(clef_faces, X, threshold)
 
-clef_to_true_error = mlx.setDistance_error(clef_faces, clef_mass, 
-                                           faces_true, wei_true, dimension=dim)
-true_to_clef_error = mlx.setDistance_error(faces_true, wei_true, 
-                                           clef_faces, clef_mass, dimension=dim)
+clef_to_true_error = mlx.setDistance_error_l2l(clef_faces, clef_mass, 
+                                               faces_true, wei_true, 1,
+                                               dimension=dim)
+true_to_clef_error = mlx.setDistance_error_l2l(faces_true, wei_true, 
+                                               clef_faces, clef_mass,
+                                               total_mass, dimension=dim)
 clef_unsupervised_error = mlx.setDistance_subfaces_data(
     clef_faces, threshold, std_Xtest, single_test_clef, epsilon=None,
-    masses=clef_mass)
+    masses=clef_mass, total_mass=total_mass)
 print(f'CLEF set distance estimated_to_true_error: {clef_to_true_error}')
 print(f'CLEF set distance true_to_estimated_error: {true_to_clef_error}')
 print(f'CLEF set distance data_to_estimated_error: {clef_unsupervised_error}')
@@ -508,11 +513,11 @@ for i in range(nkappa):
     clef_mass_i = mlx.clef_estim_subfaces_mass(clef_faces_i, X, threshold)
     clef_unsup_error_vect[i] = mlx.setDistance_subfaces_data(
         clef_faces_i, threshold, std_Xtest, include_singletons=single_test_clef,
-        epsilon=None,  masses=clef_mass_i)
-    clef_superv_1 = mlx.setDistance_error(
-        clef_faces_i, clef_mass_i, faces_true, wei_true, dimension=dim)
-    clef_superv_2 = mlx.setDistance_error(
-        faces_true, wei_true, clef_faces_i, clef_mass_i, dimension=dim)
+        epsilon=None,  masses=clef_mass_i, total_mass=total_mass)
+    clef_superv_1 = mlx.setDistance_error_l2l(
+        clef_faces_i, clef_mass_i, faces_true, wei_true, 1, dimension=dim)
+    clef_superv_2 = mlx.setDistance_error_l2l(
+        faces_true, wei_true, clef_faces_i, clef_mass_i, total_mass,  dimension=dim)
     clef_superv_error_vect[i]  = max(clef_superv_1, clef_superv_2)
 
 # print('clef error for different kappas:')
@@ -548,13 +553,14 @@ clef_faces_unsup = mlx.clef(X, threshold, kappa_unsup, standardize=True,
 
 clef_mass_unsup = mlx.clef_estim_subfaces_mass(clef_faces_unsup, X, threshold)
 
-clef_unsup_to_true_error = mlx.setDistance_error(
-    clef_faces_unsup, clef_mass_unsup, faces_true, wei_true, dimension=dim)
-true_to_clef_unsup_error = mlx.setDistance_error(
-    faces_true, wei_true, clef_faces_unsup, clef_mass_unsup, dimension=dim)
+clef_unsup_to_true_error = mlx.setDistance_error_l2l(
+    clef_faces_unsup, clef_mass_unsup, faces_true, wei_true, 1, dimension=dim)
+true_to_clef_unsup_error = mlx.setDistance_error_l2l(
+    faces_true, wei_true, clef_faces_unsup, clef_mass_unsup, total_mass,
+    dimension=dim)
 clef_unsup_unsupervised_error = mlx.setDistance_subfaces_data(
     clef_faces_unsup, threshold, std_Xtest, single_test_clef, epsilon=None,
-    masses=clef_mass_unsup)
+    masses=clef_mass_unsup, total_mass=total_mass)
 
 print(f'tuned CLEF set distance estimated_to_true_error: \
 {clef_unsup_to_true_error}')

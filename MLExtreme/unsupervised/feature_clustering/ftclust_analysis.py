@@ -1,9 +1,12 @@
 import numpy as np
+import warnings
+from . import utilities as ut
+from ...utils.EVT_basics import round_signif
 ## TEMPORARY
 import sys
 import pdb
-from . import utilities as ut
-from ...utils.EVT_basics import round_signif
+
+
 
 def setDistance_subface_to_matrix(subface, subfaces_matrix):
     """
@@ -65,7 +68,8 @@ def setDistance_subface_to_matrix(subface, subfaces_matrix):
 #     return setDistance_subface_to_matrix(subface, subfaces_matrix, normalize)
     
 def setDistance_error_m2m(subfaces_matrix, masses, subfaces_reference_matrix,
-                          reference_masses=None, expo_model=True, rate=10,):
+                          reference_masses=None, total_reference_mass=None,
+                          expo_model=True, rate=10,):
     """Computes the average aggregated set distance between all rows of
     subfaces_matrix and the matrix subfaces_reference_matrix.
 
@@ -121,13 +125,18 @@ def setDistance_error_m2m(subfaces_matrix, masses, subfaces_reference_matrix,
             
     else:  # in this case return the deviance in a mixture model on subsets
         if reference_masses is None:
+            warnings.warn('No reference masses provided. Using uniform weights by default.')
             nsub_ref = subfaces_reference_matrix.shape[0]
             reference_masses = np.ones(nsub_ref)/nsub_ref
 
         if isinstance(reference_masses, list):
             reference_masses = np.array(reference_masses)
 
-        ref_weights = reference_masses / np.sum(reference_masses)
+        if total_reference_mass is None:
+            warnings.warn('No total mass  provided. Using sum of reference masses by default.')
+            total_reference_mass = np.sum(reference_masses)
+            
+        ref_weights = reference_masses / total_reference_mass
         for i in range(n_subfaces):
             dists = setDistance_subface_to_matrix(subfaces_matrix[i],
                                                   subfaces_reference_matrix)
@@ -143,10 +152,11 @@ def setDistance_error_m2m(subfaces_matrix, masses, subfaces_reference_matrix,
     return np.sum(min_dists * weights)
 
 
-def setDistance_error(subfaces_list, masses, subfaces_reference_list,
-                      reference_masses=None, dimension=None,
-                      expo_model=True, rate=10
-                      ):
+def setDistance_error_l2l(subfaces_list, masses, subfaces_reference_list,
+                          reference_masses=None, total_reference_mass=None,
+                          dimension=None,
+                          expo_model=True, rate=10
+                          ):
     """
     Computes the average minimum set distance between
      all entries of subfaces_list and  the reference list
@@ -167,7 +177,8 @@ def setDistance_error(subfaces_list, masses, subfaces_reference_list,
         subfaces_reference_list, dimension)
     return setDistance_error_m2m(subfaces_matrix, masses,
                                  subfaces_reference_matrix,
-                                 reference_masses, expo_model, rate)
+                                 reference_masses, total_reference_mass,
+                                 expo_model, rate)
 
 
 ##################################
@@ -175,7 +186,8 @@ def setDistance_error(subfaces_list, masses, subfaces_reference_list,
 
 def setDistance_subfaces_data(subfaces_list,  threshold, std_data,
                               include_singletons=False, 
-                              epsilon=None, masses=None, expo_model=True,
+                              epsilon=None, masses=None, total_mass=None,
+                              expo_model=True,
                               rate=10):
     """
     Calculates the average set Distance distance between a list of
@@ -192,31 +204,40 @@ def setDistance_subfaces_data(subfaces_list,  threshold, std_data,
     """
     if len(subfaces_list) == 0:
         return float('inf')
+
     subfaces_matrix = ut.subfaces_list_to_matrix(subfaces_list,
                                                  dimension=std_data.shape[1])
-    binary_data = ut.binary_large_features(std_data, threshold, epsilon=epsilon)
+    binary_data = ut.binary_large_features(std_data, threshold,
+                                           epsilon=epsilon)
+
+    if isinstance(masses, list):
+        masses = np.array(masses)
+                
+    if expo_model:
+        if masses is None:
+            warnings.warn('No masses given for subfaces_list. Estimating on test dataset and proceeding ...')
+            masses = ut.estim_subfaces_mass(subfaces_list, std_data, threshold,
+                                            epsilon, standardize=False)
+        if total_mass is None:
+            warnings.warn('No total mass provided for the angular measure. Estimating on the test set and proceeding ...')
+            total_mass = threshold * binary_data.shape[0] / std_data.shape[0]
+
     if not include_singletons:
         id_keep_data = np.where(np.sum(binary_data, axis=1) >= 2)[0]
         binary_data = binary_data[id_keep_data]
         id_keep_estim = np.where(np.sum(subfaces_matrix, axis=1) >= 2)[0]
-        subfaces_matrix = subfaces_matrix[id_keep_estim]       
+        subfaces_matrix = subfaces_matrix[id_keep_estim]
         if masses is not None:
-            if isinstance(masses, list):
-                masses = np.array(masses)
             masses = masses[id_keep_estim]
-         
-    # data_to_estim =  np.mean([np.min(
-    #     setDistance_subface_to_matrix(row, subfaces_matrix))
-    #                           for row in binary_data])
-    # )]
-    data_to_estim = setDistance_error_m2m(
+        
+    error_data_to_estim = setDistance_error_m2m(
         subfaces_matrix=binary_data, masses=None,
-        subfaces_reference_matrix=subfaces_matrix, 
-        reference_masses=masses, expo_model=expo_model,
-        rate=rate
+        subfaces_reference_matrix=subfaces_matrix,
+        reference_masses=masses, total_reference_mass=total_mass,
+        expo_model=expo_model, rate=rate
     )
  
-    return  data_to_estim # max(estim_to_data, data_to_estim)
+    return error_data_to_estim  # max(estim_to_data, data_to_estim)
     
 
 

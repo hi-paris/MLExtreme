@@ -324,7 +324,7 @@ def clef_estim_subfaces_mass(subfaces_list, X, threshold,
 def clef_select_kappa_AIC(vect_kappa, X, radial_threshold,
 #                          include_singletons=True,
                           plot=False, standardize=True,
-                          unstable_kappa_max=0.1):
+                          unstable_kappa_max=0.05):
     if standardize:
         radii = np.max(rank_transform(X), axis=1)
     else:

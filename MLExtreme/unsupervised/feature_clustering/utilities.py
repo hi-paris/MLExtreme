@@ -109,7 +109,7 @@ def estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
     for k in range(len(subfaces_list)):
         subface = subfaces_matrix[k]
         shared_features = np.dot(x_bin, subface.reshape(-1, 1)) #(num_extremes,1)
-        num_features_samples = np.sum(x_bin, 1).reshape(-1,1) #(num_extremes,1)
+        num_features_samples = np.sum(x_bin, 1).reshape(-1, 1) #(num_extremes,1)
         num_features_subface = np.sum(subface) #int 
         sample_superset_of_subface = num_features_subface == shared_features
         sample_subset_of_subface = num_features_samples == shared_features

@@ -15,7 +15,7 @@ from .clef import (
 from .ftclust_analysis import (
     # setDistance_subface_to_matrix,
     # setDistance_subface_to_list,
-    setDistance_error,
+    setDistance_error_l2l,
     setDistance_subfaces_data,
     list_to_dict_size
     )
