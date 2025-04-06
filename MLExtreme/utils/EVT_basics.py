@@ -565,15 +565,15 @@ def test_indep_radius_rest(X, y, ratio_ext, norm_func,
     if isinstance(ratio_ext, float):
         ratio_ext = [ratio_ext]
     norm_X = norm_func(X)
-    Theta = X/norm_X.reshape(-1,1)
+    Theta = X/norm_X.reshape(-1, 1)
     if y is  None:
         Z = Theta
     else:
-        Z = np.column_stack((Theta,y.reshape(-1,1)))
+        Z = np.column_stack((Theta, y.reshape(-1, 1)))
     pvalues = []
     count = 0
     for ratio in ratio_ext:
-        count +=173
+        count += 173
         threshold = np.quantile(norm_X, 1-ratio)
         id_extreme = (norm_X >= threshold)
         r_ext = norm_X[id_extreme]

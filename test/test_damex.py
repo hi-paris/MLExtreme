@@ -21,11 +21,11 @@ bin_array = mlx.binary_large_features(X_test, radius, epsilon=epsilon)
 bin_array
 faces, counts = mlx.damex_0(bin_array)
 
-faces2, limit_mass = mlx.damex(X_test, radius, epsilon=epsilon, min_counts=0,
+faces2, limit_mass = mlx.damex_fit(X_test, radius, epsilon=epsilon, min_counts=0,
                                standardize=False)
 
 
-faces2, limit_mass = mlx.damex(X_test, radius, epsilon=epsilon, min_counts=0,
+faces2, limit_mass = mlx.damex_fit(X_test, radius, epsilon=epsilon, min_counts=0,
                                standardize=True)
 
 print(faces)

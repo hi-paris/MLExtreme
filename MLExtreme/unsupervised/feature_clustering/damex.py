@@ -1,255 +1,508 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from . import utilities as ut  # #import binary_large_features
+from copy import deepcopy
+from . import utilities as ut
 from ...utils.EVT_basics import rank_transform, round_signif
-# TEMPORARY
-import pdb
+#import pdb
+
+# ################
+# ## DAMEX CLASS
+# ################
 
 
-
-def damex_0(binary_matrix, include_singletons=True):
-    """Analyzes a binary matrix to determine the number of points per subface.
-
-    Parameters:
-    - binary_matrix (np.ndarray):
-        A binary matrix where rows represent samples
-        and columns represent features.
-
-    Returns:
-        - faces (list of lists):
-            A list of subfaces of the infinite sphere,
-            each represented as a list of feature indices.
-    
-        -  mass (np.ndarray):
-            An array indicating the number of rescaled
-            samples observed within each subface.
-
+class damex:
     """
-    # set the minimum number of features per subface: 
-    if include_singletons:
-        min_features = 1
-    else:
-        min_features = 2
+    An unsupervised feature clustering model to learn "which subsets of
+    features of a random vector are likely to be simultaneously large, while
+    the others are small".
+    """
+
+    def __init__(self, epsilon=0.1, min_counts=0, thresh_train=None,
+                 thresh_test=None, include_singletons_train=True,
+                 include_singletons_test=True):
+        """
+        Initialize the DAMEX model with specified parameters.
+
+        Parameters:
+        - epsilon (float): Tolerance level for clustering.
+        - min_counts (int): Minimum number of points required to form a cluster.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        """
+        self.epsilon = epsilon
+        self.min_counts = min_counts
+        self.thresh_train = thresh_train
+        self.thresh_test = thresh_test
+        self.include_singletons_train = include_singletons_train
+        self.include_singletons_test = include_singletons_test
+        self.subfaces = None  # Identified subfaces
+        self.masses = None  # Masses associated with subfaces
+        self.maximal_subfaces = None  # Maximal subfaces
+        self.maximal_masses = None  # Masses of maximal subfaces
+        self.total_mass = None  # Total mass of extremes
+        self.number_extremes = None  # Number of extreme points
+        self.dimension = None  # Dimensionality of the data
+
+    def fit(self, X, threshold=None, epsilon=None, min_counts=None,
+            standardize=True, include_singletons=None):
+        """
+        Fit the DAMEX model to the data.
+
+        Parameters:
+        - X (np.ndarray): Input data.
+        - threshold (float): Threshold for identifying extremes.
+        - epsilon (float): Tolerance level for clustering.
+        - min_counts (int): Minimum number of points required to form a
+          cluster.
+        - standardize (bool): Whether to standardize the data.
+        - include_singletons (bool): Whether to include singletons.
+
+        Returns:
+        - Subfaces (list): Identified subfaces.
+        - Masses (list): Masses associated with subfaces.
+        """
+        # Update instance attributes with optional arguments passed
+        if epsilon is not None:
+            self.epsilon = epsilon
+        if min_counts is not None:
+            self.min_counts = min_counts
+        if threshold is not None:
+            self.thresh_train = threshold
+        if include_singletons is not None:
+            self.include_singletons_train = include_singletons
+
+        # Record dimension
+        self.dimension = np.shape(X)[1]
+
+        # Standardize X if needed
+        Xt = rank_transform(X) if standardize else X
+        norm_Xt = np.max(Xt, axis=1)
+
+        # Set the training threshold if not provided
+        if self.thresh_train is None:
+            self.thresh_train = np.quantile(
+                norm_Xt, 1 - 1 / np.sqrt(len(norm_Xt)))
+
+        # Update total mass accordingly
+        self.number_extremes = np.sum(norm_Xt > self.thresh_train)
+        self.total_mass = self.thresh_train * \
+            self.number_extremes / len(norm_Xt)
+
+        # Fit the model
+        Subfaces, Masses = ut.damex_fit(
+            Xt, self.thresh_train, self.epsilon, self.min_counts,
+            standardize=False, include_singletons=self.include_singletons_train)
+
+        # Update instance's attributes
+        self.subfaces = Subfaces
+        self.masses = Masses
+
+        # compute maximal subfaces and update model
+        _, _ = self.construct_maximal_subfaces(Xt, standardize=False)
         
-    # sample size 
-    num_samples = binary_matrix.shape[0]
-    # number of features (columns) with value 1 for each
-    # sample (row)
-    num_features_per_sample = np.sum(binary_matrix, axis=1)
+        return Subfaces, Masses
 
-    # dot product of the binary matrix with its
-    # transpose: get shared features between samples.
-    # entry ij is the number of features shared by samples i and j. 
-    shared_features_matrix = np.dot(binary_matrix, binary_matrix.T)
+    def construct_maximal_subfaces(self, X, standardize=True):
+        """
+        Construct maximal subfaces from the fitted model.
 
-    # Determine samples with exactly matching features
-    # entry ij is one if (binary) samples i and j are identical
-    exact_match_matrix = (
-        shared_features_matrix == num_features_per_sample) & (
-            # shared_features_matrix.T == num_features_per_sample).T
-            shared_features_matrix == num_features_per_sample).T   # MODIF!!
+        Parameters:
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
 
-    # Set of samples not yet observed / assigned in any subface 
-    uncovered_samples = set(range(num_samples))
+        Returns:
+        - dict_max_faces (dict): Dictionary of maximal subfaces.
+        - dict_max_masses (dict): Dictionary of masses associated with maximal
+          subfaces.
+        """
+        if self.subfaces is None:
+            raise RuntimeError("The model has not been fitted yet. Call 'fit' "
+                               "with appropriate arguments before using this "
+                               "method.")
 
-    # Dictionary to store the number of samples assigned to each  subface
-    subface_sample_count = {}
+        faces_dict, _ = ut.list_to_dict(self.subfaces, self.masses)
+        self.maximal_subfaces = ut.find_maximal_faces(faces_dict, lst=True)
+        self.maximal_masses = ut.estim_subfaces_mass(self.maximal_subfaces, X,
+                                                     self.thresh_train,
+                                                     self.epsilon,
+                                                     standardize=standardize)
 
-    # Iterate over each sample to identify subfaces
-    for i in range(num_samples):
-        # Find samples with exactly matching features
-        matching_samples = list(np.nonzero(exact_match_matrix[i, :])[0])
+        dict_max_faces, dict_max_masses = ut.list_to_dict(
+            self.maximal_subfaces, self.maximal_masses)
+        return dict_max_faces, dict_max_masses
 
-        # If the current sample has not been assigned yet (this would
-        # happen if it belongs to the same subface as another sample j<i
-        if i in uncovered_samples:
-            # Mark these samples as assigned 
-            uncovered_samples -= set(matching_samples)
+    def deviance(self, Xtest, use_max_subfaces=False,
+                 #include_singletons_train=None,
+                 include_singletons_test=None,
+                 threshold=None, rate=10, standardize=False):
+        """
+        Calculate the deviance of the model on test data.
 
-            # If the sample has more than one feature, record the
-            # subface (add a key to the dictionary with value equal to
-            # the number of samples in this subface.  The key is the
-            # index of the first record of the event that a sample
-            # point belongs to the considered subface.
-            if num_features_per_sample[i] >= min_features:   # MODIFIED. previously >1
-                subface_sample_count[i] = len(matching_samples)
+        Parameters:
+        - Xtest (np.ndarray): Test data.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - include_singletons_train (bool): Whether to include singletons from
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - threshold (float): Threshold for identifying extremes.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - standardize (bool): Whether to standardize the data.
 
-    # Sort subfaces by the number of samples they cover, in descending order
-    sorted_indices = np.argsort(list(subface_sample_count.values()))[::-1]
+        Returns:
+        - float: Deviance value.
+        """
+        if self.subfaces is None:
+            raise RuntimeError("The model has not been fitted yet. Call 'fit' "
+                               "with appropriate arguments before using this "
+                               "method.")
+        if use_max_subfaces and self.maximal_masses is None:
+            raise RuntimeError("Construct maximal subfaces before computing "
+                               "the associated AIC")
 
-    # Create a (sorted) list of subfaces, each represented by the
-    # indices of `1` features
-    subfaces = [list(np.nonzero(binary_matrix[list(subface_sample_count)[i], :])[0])
-                for i in sorted_indices]
+        Xt = rank_transform(Xtest) if standardize else Xtest
 
-    converted_subfaces = [[int(item) for item in sublist]
-                          for sublist in subfaces]
+        # Update instance's attributes if passed as arguments 
+        if threshold is not None:
+            self.thresh_test = threshold
+        if self.thresh_test is None:
+            self.thresh_test = self.thresh_train
+        # if include_singletons_train is not None:
+        #     self.include_singletons_train = include_singletons_train
+        if include_singletons_test is not None:
+            self.include_singletons_test = include_singletons_test
+            
+        Subfaces = self.maximal_subfaces if use_max_subfaces else self.subfaces
+        Masses = self.maximal_masses if use_max_subfaces else self.masses
 
-    # Create an array of the number of samples covered by each subface
-    counts = [list(subface_sample_count.values())[i] for i in sorted_indices]
+        negative_pseudo_lkl = ut.setDistance_subfaces_data(
+            Subfaces, self.thresh_test, Xt,
+            #not self.include_singletons_train,
+            self.include_singletons_test, self.epsilon, Masses,
+            self.total_mass, dispersion_model=True, rate=rate)
 
-    return converted_subfaces, np.array(counts)
+        return 2 * negative_pseudo_lkl
 
+    def get_AIC(self, Xtrain, use_max_subfaces=False,
+                #include_singletons_train=None,
+                thresh_test=None,
+                include_singletons_test=None,
+                rate=10, standardize=True):
+        """
+        Calculate the Akaike Information Criterion (AIC) for the model.
 
-def damex(data, radial_threshold, epsilon, min_counts=0, standardize=True,
-          include_singletons=True):
-    """
-    Implements the methodology proposed in [1].
+        Parameters:
+        - Xtrain (np.ndarray): Training data.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - standardize (bool): Whether to standardize the data.
 
-    Given a data matrix (n,d), damex provides the groups of features that are
-    likely to be simultaneously large, while the other features are small. The
-    function also returns an estimate of the limit measure associated with each
-    subgroup.
+        Returns:
+        - float: AIC value.
+        """
+        if self.masses is None:
+            raise RuntimeError("Fit the model before computing the AIC")
+        if use_max_subfaces and self.maximal_masses is None:
+            raise RuntimeError("Construct maximal subfaces before computing "
+                               "the associated AIC")
 
-    Formally: an estimation of the vector
-    $$ M_a = lim_{t to infty} t * P(V in t *  C_a) $$
-    where V is a random vector from which (data) represents an iid sample and
-     C_a is the truncated subcone associated with the subface a of the unit sphere.
-    If `standardize=True`, standardization of `data` columns is performed internally
-    and the vector V above represents the standardized version of an entry of
-    `data`.
+        Masses = self.maximal_masses if use_max_subfaces else self.masses
+        intern_deviance = self.deviance(Xtrain, use_max_subfaces,
+                                        ##include_singletons_train,
+                                        include_singletons_test, thresh_test,
+                                        rate,
+                                        standardize)
+        return intern_deviance + 2 * len(Masses) / self.number_extremes
 
-    Parameters:
+    def select_epsilon_AIC(self, grid, X, standardize=True,
+                           unstable_eps_max=0.05, min_counts=0,
+                           use_max_subfaces=False, thresh_train=None,
+                           thresh_test=None, include_singletons_train=None,
+                           include_singletons_test=None, rate=10, plot=False,
+                           update_epsilon=True):
+        """
+        Select the optimal epsilon value based on AIC.
 
-    - data (np.ndarray): A data matrix.
+        Parameters:
+        - grid (list): Grid of epsilon values to test.
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
+        - unstable_eps_max (float): Maximum epsilon value for unstable
+          solutions.
+        - min_counts (int): Minimum number of points required to form a
+          cluster.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - plot (bool): Whether to plot the AIC values.
+        - update_epsilon (bool): Whether to update the model's epsilon value.
 
-    - radial_threshold (float): The radial threshold for selecting extreme
-      samples.
+        Returns:
+        - eps_select_aic (float): Selected epsilon value.
+        - aic_opt (float): Optimal AIC value.
+        - vect_aic (np.ndarray): Vector of AIC values.
+        """
+        old_epsilon = deepcopy(self.epsilon)
+        Xt = rank_transform(X) if standardize else X
+        ntests = len(grid)
+        vect_aic = np.zeros(ntests)
 
-    - epsilon (float): A scaling factor for the radial threshold.
+        for counter, eps in enumerate(grid):
+            subfaces, masses = self.fit(Xt, thresh_train, eps, min_counts,
+                                        False, include_singletons_train)
+            vect_aic[counter] = self.get_AIC(Xt, use_max_subfaces,
+                                             #not self.include_singletons_train,
+                                             thresh_test, 
+                                             include_singletons_test, rate,
+                                             standardize=False)
 
-    - min_counts (int): The minimum number of points required per face.
-        Defaults to 0.
+        i_maxerr = np.argmax(vect_aic[grid < unstable_eps_max])
+        eps_maxerr = grid[i_maxerr]
+        i_mask = grid <= eps_maxerr
+        i_minAIC = np.argmin(vect_aic + (1e+23) * i_mask)
+        eps_select_aic = grid[i_minAIC]
+        aic_opt = vect_aic[i_minAIC]
 
-    - standardize (bool): Defaults to True. If True, the data matrix will be
-      standardized using the rank transformation mlx.rank_transform. Meaningful
-      usage requires that columns (features) follow a unit Pareto distribution or
-      that rank-standardization has been applied previously with
-      `standardize=False`, or that columns are possibly not standard and
-      `standardize=True`.
+        if plot:
+            print(f'DAMEX: selected epsilon with AIC criterion '
+                  f'{round_signif(eps_select_aic, 2)}')
+            plt.figure(figsize=(10, 5))
+            plt.xlabel('epsilon')
+            plt.ylabel('AIC')
+            plt.title('DAMEX- AIC versus epsilon')
+            plt.scatter(grid, vect_aic, c='gray', label='AIC')
+            plt.plot([eps_select_aic, eps_select_aic], [0, max(vect_aic)],
+                     c='red')
+            plt.grid(True)
+            plt.show()
 
-    Returns:
+        # Update instance's epsilon value
+        if update_epsilon:
+            self.epsilon = eps_select_aic
+        else:
+            self.epsilon = old_epsilon
 
-    - list: A list of faces where each face has more than min_points points.
+        # Re-fit the model with final epsilon
+        _, _ = self.fit(Xt, thresh_train, self.epsilon, min_counts, False,
+                        include_singletons_train)
+        # if use_max_subfaces:
+        #     _, _ = self.construct_maximal_subfaces(Xt, False)
 
-    Note:
+        return eps_select_aic, aic_opt, vect_aic
 
-    For standardizing a raw data input, see mlx.rank_transform,
-    mlx.rank_transform_test.
+    def deviance_CV(self, X, standardize=True, epsilon=None, min_counts=None,
+                    include_singletons_train=None, include_singletons_test=None,
+                    thresh_train=None, thresh_test=None, use_max_subfaces=False,
+                    rate=10, cv=5, random_state=None):
+        """
+        Calculate the deviance using cross-validation.
 
-    References:
-    [1] Goix, N., Sabourin, A., & Clémençon, S. (2017). Sparse representation of
-    multivariate extremes with applications to anomaly detection. Journal of
-    Multivariate Analysis, 161, 12-31. (The returned estimator is defined in
-    Equation (3.3) from the reference)
-    """
-    # Standardize data if necessary
-    if standardize:
-        intern_data = rank_transform(data)
-    else:
-        intern_data = data
+        Parameters:
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
+        - epsilon (float): Tolerance level for clustering.
+        - min_counts (int): Minimum number of points required to form a
+          cluster.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - cv (int): Number of cross-validation folds.
+        - random_state (int): Random seed for reproducibility.
+
+        Returns:
+        - np.ndarray: Cross-validated deviance scores.
+        """
+        Xt = rank_transform(X) if standardize else X
+        norm_Xt = np.max(Xt, axis=1)
+
+        # Update instance's attributes if passed as arguments
+        if epsilon is not None:
+            self.epsilon = epsilon
+        if min_counts is not None:
+            self.min_counts = min_counts
+        if thresh_train is not None:
+            self.thresh_train = thresh_train
+        if self.thresh_train is None:
+            self.thresh_train = np.quantile(norm_Xt, 1 - 1 / np.sqrt(len(norm_Xt)))
+        if thresh_test is not None:
+            self.thresh_test = thresh_test
+        if self.thresh_test is None:
+            self.thresh_test = self.thresh_train
+        if include_singletons_train is not None:
+            self.include_singletons_train = include_singletons_train
+        if include_singletons_test is not None:
+            self.include_singletons_test = include_singletons_test
+
+        cv_neglkl_scores = ut.ftclust_cross_validate(
+            Xt, standardize=False, algo='damex', tolerance=self.epsilon,
+            min_counts=self.min_counts, use_max_subfaces=use_max_subfaces,
+            thresh_train=self.thresh_train, thresh_test=self.thresh_test,
+            include_singletons_train=self.include_singletons_train,
+            include_singletons_test=self.include_singletons_test,
+            rate=rate, cv=cv, random_state=random_state)
+
+        return 2 * cv_neglkl_scores
+
+    def select_epsilon_CV(self, grid, X, standardize=True,
+                          unstable_tol_max=0.05, min_counts=0,
+                          use_max_subfaces=False, thresh_train=None,
+                          thresh_test=None, include_singletons_train=None,
+                          include_singletons_test=None, rate=10, cv=5,
+                          random_state=None, plot=False, update_epsilon=True):
+        """
+        Select the optimal epsilon value based on cross-validation.
+
+        Parameters:
+        - grid (list): Grid of epsilon values to test.
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
+        - unstable_tol_max (float): Maximum tolerance value for unstable
+          solutions.
+        - min_counts (int): Minimum number of points required to form a
+          cluster.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - cv (int): Number of cross-validation folds.
+        - random_state (int): Random seed for reproducibility.
+        - plot (bool): Whether to plot the CV deviance values.
+        - update_epsilon (bool): Whether to update the model's epsilon value.
+
+        Returns:
+        - tol_cv (float): Selected epsilon value.
+        - deviance_tol_cv (float): Deviance value for the selected epsilon.
+        - cv_deviance_vect (np.ndarray): Vector of CV deviance values.
+        """
+        Xt = rank_transform(X) if standardize else X
+        epsilon_old = deepcopy(self.epsilon)
+        ntol = len(grid)
+        cv_deviance_vect = np.zeros(ntol)
+
+        for i, eps in enumerate(grid):
+            cv_scores = self.deviance_CV(Xt, False, eps, min_counts,
+                                         include_singletons_train,
+                                         include_singletons_test, thresh_train,
+                                         thresh_test, use_max_subfaces, rate,
+                                         cv, random_state)
+            cv_deviance_vect[i] = np.mean(cv_scores)
+
+        i_maxerr = np.argmax(cv_deviance_vect[grid < unstable_tol_max])
+        tol_maxerr = grid[i_maxerr]
+        i_mask = grid <= tol_maxerr
+        i_cv = np.argmin(cv_deviance_vect + (1e+23) * i_mask)
+        tol_cv = grid[i_cv]
+        deviance_tol_cv = cv_deviance_vect[i_cv]
+
+        if plot:
+            plt.scatter(grid, cv_deviance_vect, c='gray', label='CV deviance')
+            plt.plot([tol_cv, tol_cv], [0, deviance_tol_cv], c='red',
+                     label='selected value')
+            plt.grid()
+            plt.legend()
+            plt.title("DAMEX: clustering pseudo-deviance, K-fold CV scores")
+            plt.show()
+
+        if update_epsilon:
+            self.epsilon = tol_cv
+        else:
+            self.epsilon = epsilon_old
+
+        # Re-fit the model with final epsilon
+        _, _ = self.fit(Xt, thresh_train, self.epsilon, min_counts, False,
+                        include_singletons_train)
+        if use_max_subfaces:
+            _, _ = self.construct_maximal_subfaces(Xt, False)
+
+        return tol_cv, deviance_tol_cv, cv_deviance_vect
+
+    def deviance_to_true(self, subfaces_true, weights_true,
+                         use_max_subfaces=False, include_singletons=None,
+                         rate=10):
+        """
+        Calculate the deviance between the estimated subfaces and the true
+        subfaces.
+
+        Parameters:
+        - subfaces_true (list): True subfaces.
+        - weights_true (list): Weights of the true subfaces.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - rate (float, >0): Rate parameter for deviance calculation.
+
+        Returns:
+        - est_to_truth (float): Deviance from estimated to true subfaces.
+        - truth_to_est (float): Deviance from true to estimated subfaces.
+        """
+        if include_singletons is None:
+            include_singletons = self.include_singletons_test
         
-    # Generate binary matrix and determine faces and their masses
-    binary_matrix = ut.binary_large_features(intern_data, radial_threshold,
-                                             epsilon)
-    faces, counts = damex_0(binary_matrix, include_singletons)
-    n = intern_data.shape[0]
+        if self.subfaces is None:
+            raise RuntimeError("DAMEX has not been fitted yet")
 
-    limit_mass_estimator = radial_threshold * counts / n
-    id_large_mass = (counts >= min_counts)
-    number_heavy_faces = np.sum(id_large_mass)
-    truncated_faces = faces[:number_heavy_faces]
-    truncated_mass_estimator = limit_mass_estimator[:number_heavy_faces]
-    
-    # Return faces with mass greater than or equal to min_points
-    return truncated_faces, truncated_mass_estimator
+        if use_max_subfaces:
+            if self.maximal_subfaces is None:
+                raise RuntimeError("Construct maximal subfaces first")
+            Subfaces = self.maximal_subfaces
+            Masses = self.maximal_masses
+        else:
+            Subfaces = self.subfaces
+            Masses = self.masses
 
-def damex_estim_subfaces_mass(subfaces_list, X, threshold, epsilon, 
-                              standardize=True):
-    res = ut.estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
-                                 standardize=standardize)
-    return res
+        if isinstance(Masses, list):
+            Masses = np.array(Masses)
+            
+        if isinstance(weights_true, list):
+            weights_true = np.array(weights_true)
 
+        Subfaces_matrix = ut.subfaces_list_to_matrix(
+            Subfaces, self.dimension)
+        Subfaces_true_matrix = ut.subfaces_list_to_matrix(
+            subfaces_true, self.dimension)
 
-def damex_select_epsilon_AIC(vect_eps, X, radial_threshold,
-                             plot=False, standardize=True,
-                             unstable_eps_max=0.1):
-    """
-    The goal is to avoid trivial clusterings, such as a
-    uniform scattering of points on many subfaces.  Here, a
-    cluster is identified with a subface.
-
-    **Key Idea**: A well-chosen
-    epsilon should yield an informative clustering of points, characterized
-    by low entropy. This is directly related to the AIC of a categorical model where each identified subface corresponds to a category. 
-    To avoid unstable solutions   for small epsilon with one large cluster (the central face) and a many small clusters (low dimensional subfaces), the algorithm searches for a maximizer of the AIC eps_max_aic (ie a bad epsilon) in the range [0, unsafe_eps_max] and then looks for a minimum [eps_max_aic, vect_eps[-1]], where
-    vect_eps is the grid passed in argument for the search. Values of the latter should be sorted in increasing order. 
-    """
-    if standardize:
-        radii = np.max(rank_transform(X), axis=1)
-    else:
-        radii = np.max(X, axis=1)
-    num_extremes = np.sum(radii >= radial_threshold)
-    total_mass = radial_threshold * num_extremes / X.shape[0]
-    ntests = len(vect_eps)
-    vect_aic = np.zeros(ntests)
-    # vect_number_faces = np.zeros(ntests)
-    counter = 0
-    for eps in vect_eps:
-        _, list_of_masses = damex(X, radial_threshold, eps,
-                                  min_counts=0, 
-                                  standardize=standardize,
-                                  include_singletons=True)
-        # selection based on AIC:
-        # vect_aic below is proportional to :
-        # - log-likelihood(categorical model) + k where k
-        # is the number of categories, ie the number of subfaces.
-        # vect_aic = num_extremes * vect_entropy + vect_number_faces 
-        vect_aic[counter] = ut.AIC_clustering(list_of_masses, num_extremes,
-                                              total_mass)
-        # vect_number_faces[counter] = len(list_of_masses)
-        counter += 1
+        if not include_singletons:
+            id_keep_estim = np.where(np.sum(Subfaces_matrix, axis=1) >= 2)[0]
+            id_keep_true = np.where(np.sum(Subfaces_true_matrix,
+                                           axis=1) >= 2)[0]
+            Subfaces_matrix = Subfaces_matrix[id_keep_estim]
+            Masses = Masses[id_keep_estim]
+            Subfaces_true_matrix = Subfaces_true_matrix[id_keep_true]
+            weights_true = weights_true[id_keep_true]
+            
+        est_to_truth = 2 * ut.setDistance_error_m2m(
+            Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true, 1,
+            True, rate)
+        truth_to_est = 2 * ut.setDistance_error_m2m(
+            Subfaces_true_matrix, weights_true, Subfaces_matrix, Masses,
+            self.total_mass, True, rate)
         
-    i_maxerr = np.argmax(vect_aic[vect_eps < unstable_eps_max])
-    eps_maxerr = vect_eps[i_maxerr]
-    i_mask = vect_eps <= eps_maxerr
-    i_minAIC = np.argmin(vect_aic + (1e+23) * i_mask)
-    # #i_candidates_aic[i_minAIC_candidates]
-    eps_select_aic = vect_eps[i_minAIC]
-
-    # selection based on minimum number of subfaces
-    # i_select_numfaces = np.argmin(vect_number_faces + (1e+23) * i_mask)
-    # eps_select_numfaces = vect_eps[i_select_numfaces]
-
-    if plot:
-        #fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-        plt.figure(figsize=(10, 5))
-        plt.xlabel('epsilon')
-        plt.ylabel('AIC')
-        plt.title('DAMEX- AIC versus epsilon')
-        # axs[0].plot([eps_select_entropy, eps_select_entropy],
-        #             [0, max(vect_entropy)], c='blue')
-        plt.scatter(vect_eps, vect_aic, c='gray', label='AIC')
-        plt.plot([eps_select_aic, eps_select_aic],
-                    [0, max(vect_aic)], c='red')
-        plt.grid(True)
-        # axs[1].scatter(vect_eps, vect_number_faces, c='gray')
-        # axs[1].plot([eps_select_numfaces, eps_select_numfaces],
-        #             [0, max(vect_number_faces)], c='red')
-
-        # axs[1].set_xlabel('epsilon')
-        # axs[1].set_ylabel('number of faces')
-        # axs[1].set_title('Number of faces versus epsilon')
-        # axs[1].grid(True)
-       #plt.tight_layout()
-        plt.show()
-
-    print(f'DAMEX: selected epsilon with AIC method: \
-        {round_signif(eps_select_aic, 2)}')
+        return est_to_truth, truth_to_est
         
-        # print(f'size based selection of epsilon:\
-        # {round_signif(eps_select_numfaces, 2)}')
-        # eps_select_entropy,
-    return eps_select_aic  # np.array([eps_select_aic, eps_select_numfaces])
+        # est_to_truth = 2 * ut.setDistance_error_l2l(
+        #     Subfaces, Masses, subfaces_true, weights_true, 1, self.dimension,
+        #     True, rate)
 
+        # truth_to_est = 2 * ut.setDistance_error_l2l(
+        #     subfaces_true, weights_true, Subfaces, Masses, self.total_mass,
+        #     self.dimension, True, rate)
 
+        # return est_to_truth, truth_to_est

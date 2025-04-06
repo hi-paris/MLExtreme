@@ -10,7 +10,10 @@ class xcovPredictor:
      designed specifically for making predictions on the tails of the
      covariate distribution.
     
-     Parameters ---------- task: str The type of prediction task
+     Parameters
+    ----------
+
+    task: str The type of prediction task
      envisioned.  Must be either 'prediction' or 'classification'.
      
     model : object The model to be used for prediction. Must have a
@@ -20,7 +23,10 @@ class xcovPredictor:
         the input data. Default is L2 norm.
 
      
-    Attributes ---------- task : str The type of prediction task
+    Attributes
+    ----------
+
+    task : str The type of prediction task
     envisioned.  Either 'prediction' or 'classification'.
         
     model : object The model used for prediction.  It is a
@@ -36,7 +42,10 @@ class xcovPredictor:
         and later set to the ratio k/n of extreme training sample
         divided by the training sample size.
 
-    Methods _________ .fit : fit the self.model object using the angle
+    Methods
+    _________
+
+    .fit : fit the self.model object using the angle
     of largest covariates and their associated targets
     
     .predict : predicts the target based on new (extreme) covariates

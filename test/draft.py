@@ -25,7 +25,17 @@ import MLExtreme as mlx
 # n = 20000
 # Dim = 2
 
+def tata(x):
+    x = 3
+    print(x)
 
+def titi(x,y, **kwargs):
+    return x+y
+
+def toto(z, x, **kwargs):
+    return z + titi(x,**kwargs)
+
+toto(x=1,y=2,z=3, a=2)
 
 radius = 3
 epsilon = 0.3
@@ -43,7 +53,7 @@ bin_array = mlx.binary_large_features(X_test, radius, epsilon=epsilon)
 bin_array
 faces, counts = mlx.damex_0(bin_array)
 # faces_dict = mlx.list_to_dict_size(faces) # # order faces by their dimension: usage??
-faces2, limit_mass = mlx.damex(X_test, radius, epsilon=epsilon, min_counts=0,
+faces2, limit_mass = mlx.damex_fit(X_test, radius, epsilon=epsilon, min_counts=0,
                                standardize=False)
 
 print(faces)
@@ -143,7 +153,7 @@ plt.title('Scatter Plot of the rank_transformed  dataset and thresholds')
 plt.legend()
 plt.show()
 
-faces, mass = mlx.damex(X, threshold, epsilon, min_counts=min_counts,
+faces, mass = mlx.damex_fit(X, threshold, epsilon, min_counts=min_counts,
                         standardize=True)
 print("\n")
 print("List of subfaces found by DAMEX:")

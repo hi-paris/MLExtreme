@@ -1,371 +1,449 @@
-import itertools as it
+
 import numpy as np
 import matplotlib.pyplot as plt
-# import itertools as it
-import networkx as nx
-from . import utilities as ut
+from copy import deepcopy
+from . import utilities as ut  # #import binary_large_features
 from ...utils.EVT_basics import rank_transform, round_signif
-# from .damex import entropy, AIC_clustering
+
+# import itertools as it
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import itertools as it
+# import networkx as nx
 import pdb
-# from . import ftclust_analysis as fca
+# from . import utilities as ut
+# from ...utils.EVT_basics import rank_transform, round_signif
+# # from .damex import entropy, AIC_clustering
+# # from . import ftclust_analysis as fca
 
+class clef:
+    def __init__(self, kappa_min=0.1, thresh_train=None,
+                 thresh_test=None, include_singletons_train=True,
+                 include_singletons_test=True):
+        """
+        Initialize the DAMEX model with specified parameters.
 
+        Parameters:
+        - kappa_min (float): Tolerance level for clustering.
+        - min_counts (int): Minimum number of points required to form a cluster.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        """
+        self.kappa_min = kappa_min
+        self.thresh_train = thresh_train
+        self.thresh_test = thresh_test
+        self.include_singletons_train = include_singletons_train
+        self.include_singletons_test = include_singletons_test
+        self.subfaces = None  # Identified subfaces
+        self.masses = None  # Masses associated with subfaces
+        self.total_mass = None  # Total mass of extremes
+        self.number_extremes = None  # Number of extreme points
+        self.dimension = None  # Dimensionality of the data
 
-#############
-# Clef algo #
-#############
+    def fit(self, X, threshold=None, kappa_min=None,
+            standardize=True, include_singletons=None):
+        """
+        Fit the CLEF model to the data.
 
+        Parameters:
+        - X (np.ndarray): Input data.
+        - threshold (float): Threshold for identifying extremes.
+        - kappa_min (float): Tolerance level for clustering.
+        - standardize (bool): Whether to standardize the data.
+        - include_singletons (bool): Whether to include singletons.
 
-def clef(X, radius, kappa_min, standardize=True, include_singletons=False):
-    """Returns maximal faces s.t. kappa > kappa_min."""
-    if standardize:
-        x_norm = rank_transform(X)
-    else:
-        x_norm = X
-    x_bin = ut.binary_large_features(x_norm, radius)
-    result = clef_0(x_bin, kappa_min, include_singletons)
-    return result
+        Returns:
+        - Subfaces (list): Identified subfaces.
+        - Masses (list): Masses associated with subfaces.
+        """
+        # Update instance attributes with optional arguments passed
+        if kappa_min is not None:
+            self.kappa_min = kappa_min
+        if threshold is not None:
+            self.thresh_train = threshold
+        if include_singletons is not None:
+            self.include_singletons_train = include_singletons
 
+        # Record dimension
+        self.dimension = np.shape(X)[1]
 
-def clef_0(x_bin, kappa_min, include_singletons):
-    """Return maximal faces s.t. kappa > kappa_min."""
-    faces_dict = find_faces(x_bin, kappa_min)
-    faces = find_maximal_faces(faces_dict)
+        # Standardize X if needed
+        Xt = rank_transform(X) if standardize else X
+        norm_Xt = np.max(Xt, axis=1)
+
+        # Set the training threshold if not provided
+        if self.thresh_train is None:
+            self.thresh_train = np.quantile(
+                norm_Xt, 1 - 1 / np.sqrt(len(norm_Xt)))
+
+        # Update total mass accordingly
+        self.number_extremes = np.sum(norm_Xt > self.thresh_train)
+        self.total_mass = self.thresh_train * \
+            self.number_extremes / len(norm_Xt)
+
+        # Fit the model
+        Subfaces = ut.clef_fit(
+            Xt, self.thresh_train, self.kappa_min, 
+            standardize=False,
+            include_singletons=self.include_singletons_train)
+        Masses = ut.estim_subfaces_mass(
+            Subfaces, Xt, self.thresh_train, epsilon=None,
+            standardize=False)
+        # Update instance's attributes
+        self.subfaces = Subfaces
+        self.masses = Masses
+
+        return Subfaces, Masses
+
+    def deviance(self, Xtest, 
+                 #include_singletons_train=False,
+                 include_singletons_test=None,
+                 threshold=None, rate=10, standardize=False):
+        """
+        Calculate the deviance of the model on test data.
+
+        Parameters:
+        - Xtest (np.ndarray): Test data.
+        - remove_singletons_train (bool): Whether to remove singletons from
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - threshold (float): Threshold for identifying extremes.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - standardize (bool): Whether to standardize the data.
+
+        Returns:
+        - float: Deviance value.
+        """
+        if self.subfaces is None:
+            raise RuntimeError("The model has not been fitted yet. Call 'fit' "
+                               "with appropriate arguments before using this "
+                               "method.")
+
+        Xt = rank_transform(Xtest) if standardize else Xtest
+
+        # Update instance's attributes if passed as arguments
+        if threshold is not None:
+            self.thresh_test = threshold
+        if self.thresh_test is None:
+            self.thresh_test = self.thresh_train
+        if include_singletons_test is not None:
+            self.include_singletons_test = include_singletons_test
+
+        Subfaces = self.subfaces
+        Masses = self.masses
+
+        negative_pseudo_lkl = ut.setDistance_subfaces_data(
+            Subfaces, self.thresh_test, Xt, #remove_singletons_train,
+            self.include_singletons_test, None, Masses,
+            self.total_mass, dispersion_model=True, rate=rate)
+
+        return 2 * negative_pseudo_lkl
+
     
-    if include_singletons:
-        dim = np.shape(x_bin)[1]
-        missed_singletons = cons_missing_singletons(faces, dim)
-        for sing in missed_singletons:
-            faces.append(sing)
-    return faces
-
-
-##################
-# CLEF functions #
-##################
-
-def cons_missing_singletons(faces, d):
-    # Create a set of all possible indices
-    all_indices = set(range(d))
-    # Iterate through each sublist in faces and remove its elements from all_indices
-    for sublist in faces:
-        all_indices.difference_update(sublist)
-
-    # Convert the remaining indices to a list and return
-    list_indices =  list(all_indices)
-    return list([index] for index in list_indices)
-
-
-
-def faces_init(x_bin, mu_0):
-    """Returns faces of size 2 s.t. kappa > kappa_min."""
-    asymptotic_pair = []
-    for (i, j) in it.combinations(range(x_bin.shape[1]), 2):
-        pair_tmp = x_bin[:, [i, j]]
-        one_out_of_two = np.sum(np.sum(pair_tmp, axis=1) > 0)
-        two_on_two = np.sum(np.prod(pair_tmp, axis=1))
-        if one_out_of_two > 0:
-            proba = two_on_two / one_out_of_two
-            if proba > mu_0:
-                asymptotic_pair.append([i, j])
-
-    return asymptotic_pair
-
-
-def compute_beta(x_bin, face):
-    return np.sum(np.sum(x_bin[:, face], axis=1) > len(face)-2)
-
-
-def kappa(x_bin, face):
-    """Returns kappa value.
-
-    kappa = #{i | for all j in face, X_ij=1} /  #{i | at least |face|-1 j, X_ij=1}
-
-    """
-    beta = compute_beta(x_bin, face)
-    all_face = np.sum(np.prod(x_bin[:, face], axis=1))
-    if beta == 0.:
-        kap = 0.
-    else:
-        kap = all_face / float(beta)
-
-    return kap
-
-
-
-def find_faces(x_bin, kappa_min):
-    """Returns all faces s.t. kappa > kappa_min."""
-    dim = x_bin.shape[1]
-    size = 2
-    faces_dict = {}
-    faces_dict[size] = faces_init(x_bin, kappa_min)
-    # print('face size : nb faces')
-    while len(faces_dict[size]) > size:
-        # print(size, ':', len(faces_dict[size]))
-        faces_dict[size + 1] = []
-        faces_to_try = candidate_subfaces(faces_dict[size], size, dim)
-        if faces_to_try:
-            for face in faces_to_try:
-                if kappa(x_bin, face) > kappa_min:
-                    faces_dict[size + 1].append(face)
-        size += 1
-
-    return faces_dict
-
-
-def find_maximal_faces(faces_dict, lst=True):
-    """Return inclusion-wise maximal faces."""
-    # k = len(faces_dict.keys()) + 1
-    if len(faces_dict) == 0:
-        return []
-    list_keys = []
-    for k in faces_dict.keys():
-        list_keys.append(k)
-    list_keys.sort(reverse=True)
-    k = list_keys[0]
-    maximal_faces = [faces_dict[k]]
-    faces_used = list(map(set, faces_dict[k]))
-    # for i in list_keys[:-1]:  ##range(1, k - 1):
-    for j in list_keys[1:]:
-        face_tmp = list(map(set, faces_dict[j]))
-        for face in faces_dict[j]:
-            for face_test in faces_used:
-                if len(set(face) & face_test) == j:
-                    face_tmp.remove(set(face))
-                    break
-        maximal_faces.append(list(map(list, face_tmp)))
-        faces_used = faces_used + face_tmp
-    maximal_faces = maximal_faces[::-1]
-    if lst:
-        maximal_faces = [face for faces_ in maximal_faces
-                         for face in faces_]
-
-    return maximal_faces
-
-
-# #################
-# Generate Candidate Subfaces of Increased Size at Each CLEF Iteration
-# #################
-
-# def list_subfaces_to_bin_matrix(subfaces, dimension):
-#     """
-#     Converts a list of subface indices into a binary matrix.
-
-#     Args:
-#     - subfaces (list): List of subfaces.
-#     - dimension (int): Dimensionality of the ambient space.
-
-#     Returns:
-#     - np.ndarray: Binary matrix representation of subfaces.
-#     """
-#     num_subfaces = len(subfaces)
-#     vector_subfaces = np.zeros((num_subfaces, dimension))
-
-#     for subface_index, subface in enumerate(subfaces):
-#         vector_subfaces[subface_index, subface] = 1.0
-
-#     return vector_subfaces
-
-
-def make_graph(subfaces, size, dimension):
-    """
-    Creates a graph where nodes represent subfaces and edges exist if subfaces
-    differ by at most one feature.
-
-    It is the main building block of the `candidate_sufaces' function
-    used in CLEF and variants [1,2].
-
-    Args:
-    - subfaces (list): List of subfaces.
-    - size (int): Size of the subfaces.
-    - dimension (int): Dimensionality of the subfaces.
-
-    Returns:
-    - nx.Graph: Graph representation of subfaces.
-
-    References
-    -----------
-
-    [1] Chiapino, M., & Sabourin, A. (2016,September). Feature clustering
-    for extreme events analysis, with application to extreme stream-flow data.
-    In International workshop on new frontiers in mining complex patterns
-    (pp. 132-147). Cham: Springer International Publishing.
-    
-    [2] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-    """
-    vector_subfaces = ut.subfaces_list_to_matrix(subfaces, dimension)
-    num_subfaces = len(vector_subfaces)
-    graph = nx.Graph()
-    nodes = range(num_subfaces)
-    graph.add_nodes_from(nodes)
-    edges = np.nonzero(np.triu(
-        np.dot(vector_subfaces, vector_subfaces.T) == size - 1))
-    graph.add_edges_from([(edges[0][i], edges[1][i])
-                          for i in range(len(edges[0]))])
-
-    return graph
-
-
-def candidate_subfaces(subfaces, size, dimension):
-    """Generates a list A_{s+1} of candidate subfaces of size s+1
-    from a list A_s = `subfaces' of subfaces of size s, with `s=size`.
-    Candidate subfaces are all subfaces of size s+1 which are
-    supersets of each of subface of size s in the current list
-    `subfaces'.
-
-    This is a key step in CLEF algorithm [1] and variants [2]
-
-    Args:
-    - subfaces (list): List of subfaces.
-    - size (int): Size of the subfaces.
-    - dimension (int): Dimensionality of the subfaces.
-
-    Returns:
-    - list: List of candidate subfaces.
-
-    References
-    -----------
-
-    [1] Chiapino, M., & Sabourin, A. (2016,September). Feature clustering
-    for extreme events analysis, with application to extreme stream-flow data.
-    In International workshop on new frontiers in mining complex patterns
-    (pp. 132-147). Cham: Springer International Publishing.
-    
-    [2] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-
-    """
-    graph = make_graph(subfaces, size, dimension)
-    candidate_subfaces_list = []
-    cliques = list(nx.find_cliques(graph))
-    indices_to_try = np.nonzero(np.array(
-        list(map(len, cliques))) == size + 1)[0]
-
-    for index in indices_to_try:
-        clique_features = set([])
-        for subface_index in range(len(cliques[index])):
-            clique_features = clique_features | set(
-                subfaces[cliques[index][subface_index]])
-        clique_features = list(clique_features)
-        if len(clique_features) == size + 1:
-            candidate_subfaces_list.append(clique_features)
-
-    return candidate_subfaces_list
-
-
-# ###########################
-# Subfaces frequency analysis #
-# ###########################
-
-
-# def rho_value(binary_matrix, subface, k):
-#     """
-#     Calculates the rho value of a subface.
-#     (notation r_a(1) in [1], where a is the subface)
-
-#     Args:
-#     - binary_matrix (np.ndarray): Binary matrix.
-#     - subface (list): Subface to evaluate.
-#     - k (int): Number of samples.
-
-#     Returns:
-#     - float: Rho value.
-
-#     References
-#     -----------
-    
-#     [1] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-#     variables with the potential of being large simultaneously.
-#     Extremes, 22, 193-222.
-
-#     """
-#     return np.sum(np.sum(
-#         binary_matrix[:, subface], axis=1) == len(subface)) / float(k)
-
-
-def partial_matrix(base_matrix, partial_matrix, column_index):
-    """
-    Replaces the column_index column of base_matrix with the corresponding
-    column from partial_matrix.
-
-    Used in asymptotic variants of CLEF [1] to compute partial derivatives
-    of the 'kappa' and the 'r' functions
-
-    Args:
-    - base_matrix (np.ndarray): Base matrix.
-    - partial_matrix (np.ndarray): Partial matrix.
-    - column_index (int): Index of the column to replace.
-
-    Returns:
-    - np.ndarray: Modified matrix.
-    
-    References
-    -----------
-    
-    [1] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
-    variables with the potential of being large simultaneously.
-    Extremes, 22, 193-222.
-
-    """
-    matrix_copy = np.copy(base_matrix)
-    matrix_copy[:, column_index] = partial_matrix[:, column_index]
-
-    return matrix_copy
-
-def clef_estim_subfaces_mass(subfaces_list, X, threshold,
-                             standardize=True):
-    res = ut.estim_subfaces_mass(subfaces_list, X, threshold, epsilon=None,
-                                 standardize=standardize)
-    return res
-
-def clef_select_kappa_AIC(vect_kappa, X, radial_threshold,
-#                          include_singletons=True,
-                          plot=False, standardize=True,
-                          unstable_kappa_max=0.05):
-    if standardize:
-        radii = np.max(rank_transform(X), axis=1)
-    else:
-        radii = np.max(X, axis=1)
-    num_extremes = np.sum(radii >= radial_threshold)
-    total_mass =  radial_threshold * num_extremes / X.shape[0]
-    ntests = len(vect_kappa)
-    vect_aic = np.zeros(ntests)
-    counter = 0
-    for kappa in vect_kappa:
-        clef_faces = clef(X, radial_threshold, kappa, standardize=standardize,
-                          include_singletons=True)
-        list_of_masses = clef_estim_subfaces_mass(clef_faces, X,
-                                                  radial_threshold,
-                                                  standardize=standardize)
-        vect_aic[counter] = ut.AIC_clustering(list_of_masses, num_extremes,
-                                              total_mass)
-        # selection based on AIC
-        # vect_aic below is
-        # proportional to : - log-likelihood(categorical model) + k where k
-        # is the number of categories, ie the number of subfaces.
-        # vect_aic = vect_entropy + vect_number_faces / num_extremes
-        counter += 1
-      
-    i_maxerr = np.argmax(vect_aic[vect_kappa < unstable_kappa_max])
-    kappa_maxerr = vect_kappa[i_maxerr]
-    i_mask = vect_kappa <= kappa_maxerr
-    i_minAIC = np.argmin(vect_aic + (1e+23) * i_mask)  
-    kappa_select_aic = vect_kappa[i_minAIC]
-    
-    if plot:
-        plt.figure(figsize=(10, 5))
-        plt.xlabel('kappa_min')
-        plt.ylabel('AIC')
-        plt.title('AIC versus kappa_min')
-        plt.scatter(vect_kappa, vect_aic, c='gray', label='AIC')
-        plt.plot([kappa_select_aic, kappa_select_aic],
-                 [0, max(vect_aic)], c='red')
-        plt.grid(True)
-        plt.show()
-
-    print(f'CLEF: selected kappa_min with AIC method: \
-        {round_signif(kappa_select_aic, 2)}')
-    return kappa_select_aic
+    def get_AIC(self, Xtrain, 
+                # remove_singletons_train=False,
+                include_singletons_test=None,
+                rate=10, standardize=True):
+        """
+        Calculate the Akaike Information Criterion (AIC) for the model.
+
+        Parameters:
+        - Xtrain (np.ndarray): Training data.
+        - remove_singletons_train (bool): Whether to remove singletons from
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - standardize (bool): Whether to standardize the data.
+
+        Returns:
+        - float: AIC value.
+        """
+        if self.masses is None:
+            raise RuntimeError("Fit the model before computing the AIC")
+
+        Masses =  self.masses
+        intern_deviance = self.deviance(Xtrain,
+                                        # remove_singletons_train,
+                                        include_singletons_test, None, rate,
+                                        standardize)
+        return intern_deviance + 2 * len(Masses) / self.number_extremes
+
+    def select_kappa_min_AIC(self, grid, X, standardize=True,
+                             unstable_kappam_max=0.05, 
+                             thresh_train=None,
+                             thresh_test=None, include_singletons_train=None,
+                             include_singletons_test=None, rate=10, plot=False,
+                             update_kappa_min=True):
+        """
+        Select the optimal kappa_min value based on AIC.
+
+        Parameters:
+        - grid (list): Grid of kappa_min values to test.
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
+        - unstable_kappam_max (float): Maximum kappa_min value for unstable
+          solutions.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - plot (bool): Whether to plot the AIC values.
+        - update_kappa_min (bool): Whether to update the model's kappa_min value.
+
+        Returns:
+        - kappam_select_aic (float): Selected kappa_min value.
+        - aic_opt (float): Optimal AIC value.
+        - vect_aic (np.ndarray): Vector of AIC values.
+        """
+        old_kappa_min = deepcopy(self.kappa_min)
+        Xt = rank_transform(X) if standardize else X
+        ntests = len(grid)
+        vect_aic = np.zeros(ntests)
+
+        for counter, kapp in enumerate(grid):
+            subfaces, masses = self.fit(
+                Xt, thresh_train, kapp, standardize=False,
+                include_singletons=include_singletons_train)
+            vect_aic[counter] = self.get_AIC(
+                Xt,
+                # not self.include_singletons_train,
+                include_singletons_test, rate,
+                standardize=False)
+
+        i_maxerr = np.argmax(vect_aic[grid < unstable_kappam_max])
+        kapp_maxerr = grid[i_maxerr]
+        i_mask = grid <= kapp_maxerr
+        i_minAIC = np.argmin(vect_aic + (1e+23) * i_mask)
+        kapp_select_aic = grid[i_minAIC]
+        aic_opt = vect_aic[i_minAIC]
+
+        if plot:
+            print(f'CLEF: selected kappa_min with AIC criterion: '
+                  f'{round_signif(kapp_select_aic, 2)}')
+            plt.figure(figsize=(10, 5))
+            plt.xlabel('kappa_min')
+            plt.ylabel('AIC')
+            plt.title('CLEF: AIC versus kappa_min')
+            plt.scatter(grid, vect_aic, c='gray', label='AIC')
+            plt.plot([kapp_select_aic, kapp_select_aic], [0, max(vect_aic)],
+                     c='red')
+            plt.grid(True)
+            plt.show()
+
+        # Update instance's kappa_min value
+        if update_kappa_min:
+            self.kappa_min = kapp_select_aic
+        else:
+            self.kappa_min = old_kappa_min
+
+        # Re-fit the model with final kappa_min
+        _, _ = self.fit(Xt, thresh_train, self.kappa_min,
+                        False,
+                        include_singletons_train)
+
+        return kapp_select_aic, aic_opt, vect_aic
+
+    def deviance_CV(self, X, standardize=True, kappa_min=None,
+                    include_singletons_train=None, include_singletons_test=None,
+                    thresh_train=None, thresh_test=None, 
+                    rate=10, cv=5, random_state=None):
+        """
+        Calculate the deviance using cross-validation.
+
+        Parameters:
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
+        - kappa_min (float): Tolerance level for clustering.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - cv (int): Number of cross-validation folds.
+        - random_state (int): Random seed for reproducibility.
+
+        Returns:
+        - np.ndarray: Cross-validated deviance scores.
+        """
+        Xt = rank_transform(X) if standardize else X
+        norm_Xt = np.max(Xt, axis=1)
+
+        # Update instance's attributes if passed as arguments
+        if kappa_min is not None:
+            self.kappa_min = kappa_min
+        if thresh_train is not None:
+            self.thresh_train = thresh_train
+        if self.thresh_train is None:
+            self.thresh_train = np.quantile(norm_Xt,
+                                            1 - 1 / np.sqrt(len(norm_Xt)))
+        if thresh_test is not None:
+            self.thresh_test = thresh_test
+        if self.thresh_test is None:
+            self.thresh_test = self.thresh_train
+        if include_singletons_train is not None:
+            self.include_singletons_train = include_singletons_train
+        if include_singletons_test is not None:
+            self.include_singletons_test = include_singletons_test
+
+        cv_neglkl_scores = ut.ftclust_cross_validate(
+            Xt, standardize=False, algo='clef', tolerance=self.kappa_min,
+            min_counts=None, use_max_subfaces=None,
+            thresh_train=self.thresh_train, thresh_test=self.thresh_test,
+            include_singletons_train=self.include_singletons_train,
+            include_singletons_test=self.include_singletons_test,
+            rate=rate, cv=cv, random_state=random_state)
+
+        return 2 * cv_neglkl_scores
+
+    def select_kappa_min_CV(self, grid, X, standardize=True,
+                            unstable_tol_max=0.05, 
+                            thresh_train=None,
+                            thresh_test=None, include_singletons_train=None,
+                            include_singletons_test=None, rate=10, cv=5,
+                            random_state=None, plot=False,
+                            update_kappa_min=True):
+        """
+        Select the optimal kappa_min value based on cross-validation.
+
+        Parameters:
+        - grid (list): Grid of kappa_min values to test.
+        - X (np.ndarray): Input data.
+        - standardize (bool): Whether to standardize the data.
+        - unstable_tol_max (float): Maximum tolerance value for unstable
+          solutions.
+        - min_counts (int): Minimum number of points required to form a
+          cluster.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - thresh_train (float): Threshold for training data.
+        - thresh_test (float): Threshold for test data.
+        - include_singletons_train (bool): Whether to include singletons in
+          training.
+        - include_singletons_test (bool): Whether to include singletons in
+          testing.
+        - rate (float, >0): Rate parameter for deviance calculation.
+        - cv (int): Number of cross-validation folds.
+        - random_state (int): Random seed for reproducibility.
+        - plot (bool): Whether to plot the CV deviance values.
+        - update_kappa_min (bool): Whether to update the model's kappa_min value.
+
+        Returns:
+        - tol_cv (float): Selected kappa_min value.
+        - deviance_tol_cv (float): Deviance value for the selected kappa_min.
+        - cv_deviance_vect (np.ndarray): Vector of CV deviance values.
+        """
+        Xt = rank_transform(X) if standardize else X
+        kappa_min_old = deepcopy(self.kappa_min)
+        ntol = len(grid)
+        cv_deviance_vect = np.zeros(ntol)
+        #pdb.set_trace()
+        for i, kapp in enumerate(grid):
+            cv_scores = self.deviance_CV(Xt, False, kapp,
+                                         include_singletons_train,
+                                         include_singletons_test, thresh_train,
+                                         thresh_test,
+                                         rate,
+                                         cv, random_state)
+            cv_deviance_vect[i] = np.mean(cv_scores)
+
+        i_maxerr = np.argmax(cv_deviance_vect[grid < unstable_tol_max])
+        tol_maxerr = grid[i_maxerr]
+        i_mask = grid <= tol_maxerr
+        i_cv = np.argmin(cv_deviance_vect + (1e+23) * i_mask)
+        tol_cv = grid[i_cv]
+        deviance_tol_cv = cv_deviance_vect[i_cv]
+
+        if plot:
+            print(f'CLEF: selected kappa_min with CV estimate of deviance: '
+                  f'{round_signif(tol_cv, 2)}')
+            plt.scatter(grid, cv_deviance_vect, c='gray', label='CV deviance')
+            plt.plot([tol_cv, tol_cv], [0, deviance_tol_cv], c='red',
+                     label='selected value')
+            plt.grid()
+            plt.legend()
+            plt.title("CLEF: expected  deviance estimated with  K-fold CV")
+            plt.show()
+
+        if update_kappa_min:
+            self.kappa_min = tol_cv
+        else:
+            self.kappa_min = kappa_min_old
+
+        # Re-fit the model with final kappa_min
+        _, _ = self.fit(Xt, thresh_train, self.kappa_min, False,
+                        include_singletons_train)
+        return tol_cv, deviance_tol_cv, cv_deviance_vect
+
+    def deviance_to_true(self,  subfaces_true, weights_true,
+                         include_singletons=None, rate=10):
+        """
+        Calculate the deviance between the estimated subfaces and the true
+        subfaces.
+
+        Parameters:
+        - subfaces_true (list): True subfaces.
+        - weights_true (list): Weights of the true subfaces.
+        - use_max_subfaces (bool): Whether to use maximal subfaces.
+        - rate (float, >0): Rate parameter for deviance calculation.
+
+        Returns:
+        - est_to_truth (float): Deviance from estimated to true subfaces.
+        - truth_to_est (float): Deviance from true to estimated subfaces.
+        """
+        if self.subfaces is None:
+            raise RuntimeError("CLEF has not been fitted yet")
+
+        if include_singletons is None:
+            include_singletons = self.include_singletons_test
+        
+        Subfaces_matrix = ut.subfaces_list_to_matrix(
+            self.subfaces, self.dimension)
+        Masses = self.masses
+        if isinstance(self.masses, list):
+            Masses = np.array(Masses)
+
+        Subfaces_true_matrix = ut.subfaces_list_to_matrix(
+            subfaces_true, self.dimension)
+        if isinstance(weights_true, list):
+            weights_true = np.array(weights_true)
+
+        if not include_singletons:
+            id_keep_estim = np.where(np.sum(Subfaces_matrix, axis=1) >= 2)[0]
+            id_keep_true = np.where(np.sum(Subfaces_true_matrix,
+                                           axis=1) >= 2)[0]
+            Subfaces_matrix = Subfaces_matrix[id_keep_estim]
+            Masses = Masses[id_keep_estim]
+            Subfaces_true_matrix = Subfaces_true_matrix[id_keep_true]
+            weights_true = weights_true[id_keep_true]
+            
+        est_to_truth = 2 * ut.setDistance_error_m2m(
+            Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true, 1,
+            True, rate)
+        truth_to_est = 2 * ut.setDistance_error_m2m(
+            Subfaces_true_matrix, weights_true, Subfaces_matrix,
+            Masses, self.total_mass, True, rate)
+        
+        return est_to_truth, truth_to_est
+        # Subfaces = self.subfaces
+        # Masses = self.masses
+                
+        # est_to_truth = 2 * ut.setDistance_error_l2l(
+        #     Subfaces, Masses, subfaces_true, weights_true, 1, self.dimension,
+        #     True, rate)
+
+        # truth_to_est = 2 * ut.setDistance_error_l2l(
+        #     subfaces_true, weights_true, Subfaces, Masses, self.total_mass,
+        #     self.dimension, True, rate)
+
+        # return est_to_truth, truth_to_est
+
