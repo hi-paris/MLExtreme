@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 from . import utilities as ut
 from ...utils.EVT_basics import rank_transform, round_signif
-#import pdb
+# import pdb
 
 # ################
 # ## DAMEX CLASS
@@ -26,10 +26,14 @@ class damex:
 
         Parameters:
         - epsilon (float): Tolerance level for clustering.
+
         - min_counts (int): Minimum number of points required to form
             a cluster.
+
         - thresh_train (float): Threshold for training data.
+
         - thresh_test (float): Threshold for test data.
+
         - include_singletons (bool): Whether to include singletons in
               training and testing.
         - use_max_subfaces (Bool): whether to consider only maximal faces
@@ -52,24 +56,30 @@ class damex:
         self.number_extremes = None  # Number of extreme points
         self.dimension = None  # Dimensionality of the data
 
-    def fit(self, X, epsilon=None,
-            standardize=True):
+    def fit(self, X, epsilon=None, standardize=True):
         """
         Fit the DAMEX model to the data.
 
         Parameters:
+        ------------
+
         - X (np.ndarray): Input data.
+
         - threshold (float): Threshold for identifying extremes.
+
         - epsilon (float): Tolerance level for clustering.
-        - min_counts (int): Minimum number of points required to form a
-          cluster.
+            If None, the instance's attribute will be used.
+
         - standardize (bool): Whether to standardize the data.
-        - include_singletons (bool): Whether to include singletons.
+
 
         Returns:
+        ---------
+
         - Subfaces (list): Identified subfaces (or maximal subfaces in case
-        self.use_max_subfaces is True).
-        - Masses (list): Masses associated with subfaces.
+            self.use_max_subfaces is True).
+
+        - Masses (np.ndarray): Masses associated with subfaces.
         """
         # Update instance attributes with optional arguments passed
         if epsilon is not None:
@@ -108,18 +118,23 @@ class damex:
             return self.maximal_subfaces, self.maximal_masses
         else:
             return Subfaces, Masses
-    
 
     def construct_maximal_subfaces(self, X, standardize=True):
         """
         Construct maximal subfaces from the fitted model.
 
         Parameters:
+        ------------
+
         - X (np.ndarray): Input data.
+
         - standardize (bool): Whether to standardize the data.
 
         Returns:
+        ----------
+
         - dict_max_faces (dict): Dictionary of maximal subfaces.
+
         - dict_max_masses (dict): Dictionary of masses associated with maximal
           subfaces.
         """
@@ -140,22 +155,25 @@ class damex:
         return dict_max_faces, dict_max_masses
 
     def deviance(self, Xtest, thresh_test=None, standardize=False):
-        """
-        Calculate the deviance of the model on test data.
+        """Calculate the deviance of the model on test data.
 
         Parameters:
+        -----------
+
         - Xtest (np.ndarray): Test data.
-        - use_max_subfaces (bool): Whether to use maximal subfaces.
-        - include_singletons_train (bool): Whether to include singletons from
-          training.
-        - include_singletons_test (bool): Whether to include singletons in
-          testing.
-        - threshold (float): Threshold for identifying extremes.
-        - rate (float, >0): Rate parameter for deviance calculation.
+
+        - thresh_test(float): Threshold for identifying extremes in
+            the test set.  If None, the instance's attribute will be
+            used instead. If the lmatter is also None, thresh_test
+            will be set to the same value as thresh_train.
+
         - standardize (bool): Whether to standardize the data.
 
         Returns:
+        --------
+
         - float: Deviance value.
+
         """
         if self.subfaces is None:
             raise RuntimeError("The model has not been fitted yet. Call 'fit' "
@@ -188,19 +206,20 @@ class damex:
         Calculate the Akaike Information Criterion (AIC) for the model.
 
         Parameters:
+        -----------
+
         - Xtrain (np.ndarray): Training data.
-        - use_max_subfaces (bool): Whether to use maximal subfaces.
-        - include_singletons_test (bool): Whether to include singletons in
-          testing.
-        - rate (float, >0): Rate parameter for deviance calculation.
+
         - standardize (bool): Whether to standardize the data.
 
-        Returns:g
+        Returns:
+        ---------
+
         - float: AIC value.
         """
         if self.masses is None:
             raise RuntimeError("Fit the model before computing the AIC")
-        
+
         Masses = self.maximal_masses if self.use_max_subfaces \
             else self.masses
         intern_deviance = self.deviance(Xtrain, self.thresh_train, standardize)
@@ -213,27 +232,28 @@ class damex:
         Select the optimal epsilon value based on AIC.
 
         Parameters:
+        ----------
+
         - grid (list): Grid of epsilon values to test.
+
         - X (np.ndarray): Input data.
+
         - standardize (bool): Whether to standardize the data.
+
         - unstable_eps_max (float): Maximum epsilon value for unstable
           solutions.
-        - min_counts (int): Minimum number of points required to form a
-          cluster.
-        - use_max_subfaces (bool): Whether to use maximal subfaces.
-        - thresh_train (float): Threshold for training data.
-        - thresh_test (float): Threshold for test data.
-        - include_singletons_train (bool): Whether to include singletons in
-          training.
-        - include_singletons_test (bool): Whether to include singletons in
-          testing.
-        - rate (float, >0): Rate parameter for deviance calculation.
+
         - plot (bool): Whether to plot the AIC values.
+
         - update_epsilon (bool): Whether to update the model's epsilon value.
 
         Returns:
+        --------
+
         - eps_select_aic (float): Selected epsilon value.
+
         - aic_opt (float): Optimal AIC value.
+
         - vect_aic (np.ndarray): Vector of AIC values.
         """
         old_epsilon = deepcopy(self.epsilon)
@@ -242,7 +262,7 @@ class damex:
         vect_aic = np.zeros(ntests)
 
         for counter, eps in enumerate(grid):
-            _, _ = self.fit(Xt,  eps, False)
+            _, _ = self.fit(Xt,  eps, standardize=False)
             vect_aic[counter] = self.get_AIC(Xt, standardize=False)
 
         i_maxerr = np.argmax(vect_aic[grid < unstable_eps_max])
@@ -278,27 +298,30 @@ class damex:
 
     def deviance_CV(self, X, standardize=True, epsilon=None,
                     thresh_test=None, cv=5, random_state=None):
-        """Calculate the deviance using cross-validation.
+        """
+        Estimate the expected deviance using cross-validation.
 
         Parameters:
-        
+        -----------
+
         - X (np.ndarray): Input data.
-        
+
         - standardize (bool): Whether to standardize the data. default to True.
-        
+
         - epsilon (float): Tolerance level for clustering. Default to
           None. If None, the instance's attribute will be used.
-        
+
         - thresh_test (float, optional): radial threshold for test
           sets. If None, the instance's attribute will be used. If the
           latter is also None, the training threshold is used instead.
-        
+
         - cv (int): Number of cross-validation folds. Default to 5
-        
+
         - random_state (int): Random seed for reproducibility. Default to None
 
         Returns:
-        
+        --------
+
         - np.ndarray: Cross-validated deviance scores.
 
         """
@@ -311,7 +334,7 @@ class damex:
             self.thresh_test = thresh_test
         if self.thresh_test is None:
             self.thresh_test = self.thresh_train
-        
+
         cv_neglkl_scores = ut.ftclust_cross_validate(
             Xt, standardize=False, algo='damex', tolerance=self.epsilon,
             min_counts=self.min_counts, use_max_subfaces=self.use_max_subfaces,
@@ -330,20 +353,32 @@ class damex:
         Select the optimal epsilon value based on cross-validation.
 
         Parameters:
+        ------------
+
         - grid (list): Grid of epsilon values to test.
+
         - X (np.ndarray): Input data.
+
         - standardize (bool): Whether to standardize the data.
+
         - update_epsilon (bool): Whether to update the model's epsilon value.
+
         - unstable_tol_max (float): Maximum tolerance value for unstable
           solutions.
+
         - cv (int): Number of cross-validation folds.
+
         - random_state (int): Random seed for reproducibility.
+
         - plot (bool): Whether to plot the CV deviance values.
 
 
         Returns:
+
         - tol_cv (float): Selected epsilon value.
+
         - deviance_tol_cv (float): Deviance value for the selected epsilon.
+
         - cv_deviance_vect (np.ndarray): Vector of CV deviance values.
         """
         Xt = rank_transform(X) if standardize else X
@@ -352,8 +387,8 @@ class damex:
         cv_deviance_vect = np.zeros(ntol)
 
         for i, eps in enumerate(grid):
-            cv_scores = self.deviance_CV(Xt, False, eps, thresh_test, cv,
-                                         random_state)
+            cv_scores = self.deviance_CV(Xt, False, eps, thresh_test,
+                                         cv, random_state)
             cv_deviance_vect[i] = np.mean(cv_scores)
 
         i_maxerr = np.argmax(cv_deviance_vect[grid < unstable_tol_max])
@@ -388,16 +423,18 @@ class damex:
         subfaces.
 
         Parameters:
+        -----------
         - subfaces_true (list): True subfaces.
+
         - weights_true (list): Weights of the true subfaces.
-        - use_max_subfaces (bool): Whether to use maximal subfaces.
-        - rate (float, >0): Rate parameter for deviance calculation.
 
         Returns:
+        --------
+
         - est_to_truth (float): Deviance from estimated to true subfaces.
+
         - truth_to_est (float): Deviance from true to estimated subfaces.
         """
-        
         if self.subfaces is None:
             raise RuntimeError("DAMEX has not been fitted yet")
 
@@ -412,7 +449,7 @@ class damex:
 
         if isinstance(Masses, list):
             Masses = np.array(Masses)
-            
+
         if isinstance(weights_true, list):
             weights_true = np.array(weights_true)
 
@@ -429,22 +466,13 @@ class damex:
             Masses = Masses[id_keep_estim]
             Subfaces_true_matrix = Subfaces_true_matrix[id_keep_true]
             weights_true = weights_true[id_keep_true]
-            
+            weights_true = weights_true / np.sum(weights_true)
+
         est_to_truth = 2 * ut.setDistance_error_m2m(
             Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true, 1,
             True, self.rate)
         truth_to_est = 2 * ut.setDistance_error_m2m(
             Subfaces_true_matrix, weights_true, Subfaces_matrix, Masses,
             self.total_mass, True, self.rate)
-        
+
         return est_to_truth, truth_to_est
-        
-        # est_to_truth = 2 * ut.setDistance_error_l2l(
-        #     Subfaces, Masses, subfaces_true, weights_true, 1, self.dimension,
-        #     True, rate)
-
-        # truth_to_est = 2 * ut.setDistance_error_l2l(
-        #     subfaces_true, weights_true, Subfaces, Masses, self.total_mass,
-        #     self.dimension, True, rate)
-
-        # return est_to_truth, truth_to_est

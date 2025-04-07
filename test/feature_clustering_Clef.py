@@ -1,30 +1,31 @@
-# %% [markdown]
-# # [Damex tutorial]
+# Author: Anne Sabourin
+# Description: CLEF tutorial
 
 # %% [markdown]
-"""Implements the DAMEX algorithm described in [1] and the CLEF algorithm in [2,3].
+# # CLEF tutorial
+
+# %% [markdown]
+"""Implements the  CLEF algorithm in [1,2].
 The considered unsupervised task is to discover the groups of components of a
-random vector which are comparatively likely to be simultaneously large.
+random vector which are comparatively likely to be simultaneously large. Compared with DAMEX, the main difference is that the subsets are constructed in an incremental manner. The goal is to prevent false discoveries of subsets. For a comparison between CLEF  and DAMEX? see the `compare_clef_damex` tutorial. 
 
-The tutorial proposes new methods to choose the tuning parameter
-epsilon in DAMEX and kappa in CLEF, mainly based on AIC and
-cross-validation, and involving a specific pseudo-likelihood for
-(random) subsets of features among {1, ..., d}. Although those methods
-have not been investigated in theory, this notebook provides some
-empirical evidence of the relevance of the proposed selection
-criteria. Alternative stopping criteria for CLEF as propsoed in [3]
+The tutorial proposes new methods to choose the tuning parameter kappa
+ in CLEF, mainly based on AIC and cross-validation, and involving a
+ specific pseudo-likelihood (a dispersion metric `al la Jorgensen')
+ for (random) subsets of features among {1, ..., d}. Although those
+ methods have not been investigated in theory, this notebook provides
+ some empirical evidence of the relevance of the proposed selection
+ criteria. See DAMEX tutorial for details.
+
+Alternative stopping criteria for CLEF as proposed in [2]
 are currently not implemented.
 
-[1] Goix, N., Sabourin, A., & Clémençon, S. (2017). Sparse
-representation of multivariate extremes with applications to anomaly
-detection. Journal of Multivariate Analysis, 161, 12-31.
-
-[2] Chiapino, M., & Sabourin, A.  Feature clustering for extreme
+[1] Chiapino, M., & Sabourin, A.  Feature clustering for extreme
 events analysis, with application to extreme stream-flow data. In
 International workshop on new frontiers in mining complex patterns
 (pp. 132-147). Cham: Springer International Publishing.
 
-[3] Chiapino, M., Sabourin, A., & Segers, J. (2019).  Identifying
+[2] Chiapino, M., Sabourin, A., & Segers, J. (2019).  Identifying
 groups of variables with the potential of being large
 simultaneously. Extremes, 22, 193-222.
 
@@ -59,24 +60,24 @@ def norm_func(x):
 # support of the limit measure.
 
 # %%
-Plot = False
+Plot = True
 seed = 42
 dim = 20  # try 5, 20, 50, 100
-num_subfaces = 5  # try 5, 20, 50
+num_subfaces = 10  # try 5, 20, 50
 subfaces_list = mlx.gen_subfaces(dimension=dim,
                                  num_subfaces=num_subfaces,
-                                 max_size=6, # try 4, 10, 20
+                                 max_size=5,  # try 4, 10, 20
                                  prevent_inclusions=False,
                                  seed=seed)
 
 # # uncomment for a simpler example:
 # subfaces_list = [[0, 1], [1, 2], [2, 3, 4]]
 
-if False:   # change to True to print the list of subfaces 
+if False:   # change to True to print the list of subfaces
     print(subfaces_list)
     pp.pprint(mlx.list_to_dict_size(subfaces_list))
 
-subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list,dim)
+subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list, dim)
 #print(subfaces_matrix)
 # dimension, number of mixture components, weights and Dirichlet center locations 
 n = int(np.sqrt(dim) * 10**3)
@@ -92,7 +93,7 @@ Mu, wei = mlx.normalize_param_dirimix(subfaces_matrix, wei)
 faces_true = subfaces_list
 wei_true = wei
 print(f'Mu matrix: \n {np.round(Mu, 3)}')
-print(f'Weights: {np.round(wei, 3)}' )
+print(f'Weights: {np.round(wei, 3)}')
 
 # %% [markdown]
 # ### Hardness settings for the tail problem 
@@ -113,7 +114,7 @@ results happen for hardness ~ 0.8
 """
 
 # %%
-hardness = 0.5
+hardness = 0.9
 
 min_mus = np.zeros(k)
 for j in range(k):
@@ -233,16 +234,16 @@ number_extremes = np.sum(norm_Xt >= threshold )
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #
 # %% [markdown]
-# # CLEF ALGORITHM (Chiapino et al. , [1,2])
+# # CLEF CLUSTERING ALGORITHM (Chiapino et al. , [1,2])
 
 
 # %%
 #create a CLEF clustering instance and fit it with default value epsilon=0.1.
 include_singletons = False
-# TODO explain
+# TODO explain. never set this to true!! 
 clusteringClef = mlx.clef(thresh_train=threshold, thresh_test=threshold,
-                          include_singletons_train=include_singletons,
-                          include_singletons_test=include_singletons)
+                          include_singletons=include_singletons)
+
 clef_subfaces, clef_masses = clusteringClef.fit(X)
 
 # %%
@@ -301,15 +302,12 @@ if True:
 
 # %% [markdown]
 # ## Unsupervised scoring.
-# See the DAMEX section for details.
+# See the DAMEX tutorial for details.
 
 
 # %%
 # Deviance to true parameters: 
 deviance_est_true, deviance_true_est = clusteringClef.deviance_to_true(
-    faces_true, wei_true)
-# same thing with maximal subfaces
-deviance_estmax_true, deviance_true_estmax = clusteringClef.deviance_to_true(
     faces_true, wei_true)
 
 
@@ -324,73 +322,50 @@ print(clusteringClef.deviance(std_Xtest,
 print("Deviances between faces, masses: \
 a) estimated to true b) true to estimated")
 print(deviance_est_true, deviance_true_est)
-print("Deviances between  maximal faces, masses: \
-a) estimated to true b) true to estimated")
-print(deviance_estmax_true, deviance_true_estmax)
 
 
 #%% [markdown]
-""" For this sample size, AIC appears to be more precise than
-cross-validation to estimate the expected deviance. However, this
-should not be taken as a general rule until further theoretical
-understanding of this pseudo-AIC criterion is achieved. Additionally,
-the deviance between the true parameters (faces and masses) and the
-estimated ones is, in principle, similar to the test set estimate of
-the total deviance, which is also observed here.  """
-# TODO CHECK: it is not clear why in practive the (subfaces-mass) deviance is even closer to the CV estimate. this may be just random. 
+""" For this sample size, AIC and CV appear to estimate relatively
+well the expected deviance Additionally, the deviance between the true
+parameters (faces and masses) and the estimated ones is, in principle,
+similar to the test set estimate of the total deviance, which is also
+observed here.  """
 
-
-# %%[markdown]# 
+# %%[markdown]#
 # ## Choosing Epsilon based on AIC / CV
-# here and below we propose choosing epsilon in DAMEX using the AIC criterion. A CV-based selection rule is also implemented (but here we retain the AIC slection rule in the end)
+# here and below we propose choosing epsilon in DAMEX using the AIC
+# criterion. A CV-based selection rule is also implemented (here
+# we retain the CV selection rule in the end)
 
 # %%
-# select kappa_min with AIC and update model:
-ntests = 20
-vect_kappa = np.geomspace(10**(-3), 1, num=ntests)
+# select kappa_min with AIC but don't update model:
+nkappa = 20
+kappa_vect = np.geomspace(10**(-3), 1, num=nkappa)
 kappa_select_AIC, aic_opt, aic_values = clusteringClef.select_kappa_min_AIC(
-    vect_kappa, X, plot=True, update_kappa_min=True)
+    kappa_vect, X, update_kappa_min=False, plot=True)
 
 
 print('kappa_min parameter selection (AIC):')
-print(mlx.round_signif(clusteringClef.kappa_min, 2))
+print(mlx.round_signif(kappa_select_AIC, 2))
 
-# select kappa_min with CV but don't update model in view of earlier findings.
-print(clusteringClef.include_singletons_train)
-print(clusteringClef.include_singletons_test)
-ntests = 20
-vect_kappa = np.geomspace(10**(-3), 1, num=ntests)
-
+# select kappa_min with CV but don't update model:
 kappa_select_CV, _, _ = clusteringClef.select_kappa_min_CV(
-    vect_kappa, X, cv=5, plot=True,
-    include_singletons_train = include_singletons,
-    include_singletons_test = include_singletons,
-    update_kappa_min=False)
+    kappa_vect, X,  update_kappa_min=False, plot=True)
 
-print('kappa_min parameter selection (CV):') 
+print('kappa_min parameter selection (CV):')
 print(mlx.round_signif(kappa_select_CV, 2))
 
-# check that kappa_min stored in object is still AIC's one.
+# check that kappa_min stored in object is still default one
 clusteringClef.kappa_min
 
-
-
 # %% [markdown]
-# ## wrapping up: comparison of all metrics 
+# ## wrapping up: comparison of all metrics:
 
 # %%
-# recommended choice of kappa here: by AIC
-nkappa = 20
-kappa_vect = np.geomspace(0.03, 1, num=nkappa)
-local_clust = mlx.clef(kappa_min=0.1, thresh_train=threshold,
-                       thresh_test=threshold,
-                       include_singletons_test=include_singletons,
-                       include_singletons_train=include_singletons)
-kappa_aic, deviance_aic, aic_vect = local_clust.select_kappa_min_AIC(
-    kappa_vect, Xt, standardize=False,  plot=False)
-
 # agreement with other metrics: 
-#aic_masses = np.zeros(nkappa)
+# recommended choice of kappa here: by CV
+kappa_select = kappa_select_CV
+i_select = np.where(kappa_select == kappa_vect)[0][0]
 aic_vals = np.zeros(nkappa)
 deviance = np.zeros(nkappa)
 deviance_train = np.zeros(nkappa)
@@ -401,21 +376,15 @@ deviance_true_est = np.zeros(nkappa)
 for i in range(nkappa):
     clust = mlx.clef(kappa_min=kappa_vect[i], thresh_train=threshold,
                      thresh_test=threshold,
-                     include_singletons_train=include_singletons,
-                     include_singletons_test=include_singletons)
-    ##pdb.set_trace()
+                     include_singletons=include_singletons)
     faces, masses = clust.fit(Xt, standardize=False)
- #   aic_masses[i] = clust.get_AIC_masses()  # /number_extremes
     aic_vals[i] = clust.get_AIC(Xt,  standardize=False)
-    # clust.deviance(Xt, standardize=False) + \
-        # 2 * len(clust.masses)/number_extremes
     deviance[i] = clust.deviance(
-        std_Xtest, 
+        std_Xtest,
         standardize=False)
     deviance_train[i] = clust.deviance(Xt,  standardize=False)
-    ##pdb.set_trace()
     deviance_cv_scores = clust.deviance_CV(
-        Xt, standardize=False, 
+        Xt, standardize=False,
         random_state=13+137*i, cv=5)
     deviance_cv[i] = np.mean(deviance_cv_scores)
     deviance_est_true[i], deviance_true_est[i] = clust.deviance_to_true(
@@ -433,7 +402,8 @@ if True:
                 label='deviance_est_true')
     plt.scatter(kappa_vect, deviance_true_est, c='green',
                 label='deviance_true_est')
-    plt.plot([kappa_aic, kappa_aic], [0, deviance_aic], c='orange')
+    plt.plot([kappa_select, kappa_select], [0, deviance_true_est[i_select]],
+             c='orange')
     plt.legend()
     plt.title("CLEF metrics sensitivity to kappa_min")
     plt.show()

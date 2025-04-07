@@ -1,5 +1,8 @@
+# Author: Anne Sabourin
+# Description: DAMEX/CLEF tutorial: comparison
+
 # %% [markdown]
-# # Comparison CLEF versus DAMEX.
+# # Comparison between CLEF and DAMEX.
 """This notebook demonstrates that DAMEX often identifies many 'false'
 subfaces in high-dimensional settings, even when a reasonable
 `min_counts` threshold is set to ignore small subfaces, and even when
@@ -23,7 +26,8 @@ terms of 'distance to truth,' which can be interpreted as predictive
 performance.
 
 """
-
+# %%
+# Imports 
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -53,7 +57,7 @@ dim = 20  # try 5, 20, 50, 100:
 num_subfaces = 10  # try 5, 20, 50
 subfaces_list = mlx.gen_subfaces(dimension=dim,
                                  num_subfaces=num_subfaces,
-                                 max_size=4, # try 4, 10, 20
+                                 max_size=10, # try 4, 10, 20
                                  prevent_inclusions=False,
                                  seed=seed)
 
@@ -65,7 +69,7 @@ if False:   # change to True to print the list of subfaces
     pp.pprint(mlx.list_to_dict_size(subfaces_list))
 
 subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list,dim)
-#print(subfaces_matrix)
+
 # dimension, number of mixture components, weights and Dirichlet center locations 
 n = int(np.sqrt(dim) * 10**3)
 k = np.shape(subfaces_matrix)[0]
@@ -232,39 +236,37 @@ threshold  = np.quantile(norm_Xt, 1 - ratio_extremes)
 # above the radial threshold. 
 number_extremes = np.sum(norm_Xt >= threshold )
 
-################
-## DAMEX 
+# ###############
+# %% [markdown]
+# ##  DAMEX  clustering 
 
 include_singletons = False
 use_max_subfaces = True
-min_counts = np.sqrt(number_extremes)*2
+min_counts = 0  ##np.sqrt(number_extremes)*2
 rate = 10
 
-damex_clust = mlx.damex(min_counts=0,  #np.sqrt(number_extremes)/5,
+damex_clust = mlx.damex(min_counts=min_counts,  
                         thresh_train=threshold, thresh_test=threshold,
-                        include_singletons_train=include_singletons,
-                        include_singletons_test=include_singletons)
+                        include_singletons=include_singletons,
+                        use_max_subfaces=use_max_subfaces,
+                        rate=rate)
 
 ntests = 20
 vect_eps = np.geomspace(10**(-3), 1, num=ntests)
 eps_select_aic, damex_aic_opt, damex_aic_values = \
     damex_clust.select_epsilon_AIC(
-        vect_eps, Xt, standardize = False, use_max_subfaces=use_max_subfaces,
-        rate=rate, plot=True, update_epsilon=False)
+        vect_eps, Xt, standardize=False, plot=True, update_epsilon=False)
 
 eps_select_cv, damex_cv_opt, damex_cv_values = damex_clust.select_epsilon_CV(
-    vect_eps, Xt, standardize=False, use_max_subfaces=use_max_subfaces,
-    rate=rate, plot=True, update_epsilon=False)
+    vect_eps, Xt, standardize=False, plot=True, update_epsilon=False)
 
 
 damex_clust.fit(Xt, epsilon=eps_select_aic, standardize=False)
-_, damex_aic_dev_to_true = damex_clust.deviance_to_true(
-    faces_true, wei_true, rate=rate, use_max_subfaces=use_max_subfaces)
+_, damex_aic_dev_to_true = damex_clust.deviance_to_true(faces_true, wei_true)
 
 
 damex_clust.fit(Xt, epsilon=eps_select_cv, standardize=False)
-_, damex_cv_dev_to_true = damex_clust.deviance_to_true(
-    faces_true, wei_true, rate=rate, use_max_subfaces=use_max_subfaces)
+_, damex_cv_dev_to_true = damex_clust.deviance_to_true(faces_true, wei_true)
 
 print('deviance truth to damex aic:')
 print(damex_aic_dev_to_true)
@@ -272,33 +274,32 @@ print(damex_aic_dev_to_true)
 print('deviance truth to damex cv:')
 print(damex_cv_dev_to_true)
 
-#######
+# ############
+# %% [markdown]
 ### CLEF
 
 clef_clust = mlx.clef(thresh_train=threshold, thresh_test=threshold,
-                      include_singletons_train=include_singletons,
-                      include_singletons_test=include_singletons)
+                      include_singletons=include_singletons,
+                      rate=rate)
 
 ntests = 20
 vect_kappa = np.geomspace(10**(-3), 1, num=ntests)
 kappa_select_aic, clef_aic_opt, clef_aic_values = \
     clef_clust.select_kappa_min_AIC(
-        vect_kappa, Xt, standardize=False, unstable_kappam_max = 0.02, 
-        rate=rate, plot=True, update_kappa_min=False)
+        vect_kappa, Xt, standardize=False, unstable_kappam_max=0.02, 
+        plot=True, update_kappa_min=False)
 
 kappa_select_cv, clef_cv_opt, clef_cv_values = clef_clust.select_kappa_min_CV(
-    vect_kappa, Xt, standardize=False,  unstable_tol_max = 0.02,
-    rate=rate, plot=True, update_kappa_min=False,random_state=1)
+    vect_kappa, Xt, standardize=False,  unstable_tol_max=0.02,
+    plot=True, update_kappa_min=False, random_state=1)
 
 
 clef_clust.fit(Xt, kappa_min=kappa_select_aic, standardize=False)
-_, clef_aic_dev_to_true = clef_clust.deviance_to_true(
-    faces_true, wei_true,  rate=rate)
+_, clef_aic_dev_to_true = clef_clust.deviance_to_true(faces_true, wei_true)
 
 
 clef_clust.fit(Xt, kappa_min=kappa_select_cv, standardize=False)
-_, clef_cv_dev_to_true = clef_clust.deviance_to_true(
-    faces_true, wei_true, rate=rate)
+_, clef_cv_dev_to_true = clef_clust.deviance_to_true(faces_true, wei_true)
 
 
 print('deviance truth to clef aic:')

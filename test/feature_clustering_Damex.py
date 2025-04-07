@@ -1,8 +1,12 @@
-# %% [markdown]
-# # [Damex tutorial]
+# Author: Anne Sabourin
+# Description: CLEF tutorial
+
 
 # %% [markdown]
-"""Implements the DAMEX algorithm described in [1] and the CLEF algorithm in [2,3].
+# # Damex tutorial
+
+# %% [markdown]
+"""Implements the DAMEX algorithm described in [1]. 
 The considered unsupervised task is to discover the groups of components of a
 random vector which are comparatively likely to be simultaneously large.
 
@@ -19,14 +23,6 @@ are currently not implemented.
 representation of multivariate extremes with applications to anomaly
 detection. Journal of Multivariate Analysis, 161, 12-31.
 
-[2] Chiapino, M., & Sabourin, A.  Feature clustering for extreme
-events analysis, with application to extreme stream-flow data. In
-International workshop on new frontiers in mining complex patterns
-(pp. 132-147). Cham: Springer International Publishing.
-
-[3] Chiapino, M., Sabourin, A., & Segers, J. (2019).  Identifying
-groups of variables with the potential of being large
-simultaneously. Extremes, 22, 193-222.
 
 """
 
@@ -62,21 +58,21 @@ def norm_func(x):
 Plot = False
 seed = 42
 dim = 20  # try 5, 20, 50, 100
-num_subfaces = 5  # try 5, 20, 50
+num_subfaces = 10  # try 5, 20, 50
 subfaces_list = mlx.gen_subfaces(dimension=dim,
                                  num_subfaces=num_subfaces,
-                                 max_size=6, # try 4, 10, 20
+                                 max_size=10,  # try 4, 10, 20
                                  prevent_inclusions=False,
                                  seed=seed)
 
 # # uncomment for a simpler example:
 # subfaces_list = [[0, 1], [1, 2], [2, 3, 4]]
 
-if False:   # change to True to print the list of subfaces 
+if False:   # change to True to print the list of subfaces
     print(subfaces_list)
     pp.pprint(mlx.list_to_dict_size(subfaces_list))
 
-subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list,dim)
+subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list, dim)
 #print(subfaces_matrix)
 # dimension, number of mixture components, weights and Dirichlet center locations 
 n = int(np.sqrt(dim) * 10**3)
@@ -228,12 +224,21 @@ threshold  = np.quantile(norm_Xt, 1 - ratio_extremes)
 # above the radial threshold. 
 number_extremes = np.sum(norm_Xt >= threshold )
 
+# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # %% [markdown]
-# ## DAMEX CLUSTERING (Goix et al.)
+# ## DAMEX CLUSTERING ALGORITHM (Goix et al.)
 
 # %%
-#create a Damex clustering instance and fit it with default value epsilon=0.1.
+# Create a Damex clustering instance and fit it with default value epsilon=0.1.
+
+
 include_singletons = False
+
+# option of  considering maximal subfaces (for inclusion) only.
+# to facilitate further comparison with CLEF, set it to true.
+# Indeed in principle, the maximal
+# subfaces issued by Damex and subfaces issued by CLEF are two
+# estimates of the same object, see Chiapino et al.
 use_max_subfaces = True
 min_counts = 0   # np.sqrt(number_extremes)
 # TODO explain
@@ -270,11 +275,7 @@ if Plot:
     plt.show()
 
 # %% [markdown]
-# inspection of subfaces and masses, with the option of
-# considering maximal subfaces (for inclusion) only, to facilitate
-# further comparison with CLEF. Indeed in principle, the maximal
-# subfaces issued by Damex and subfaces issued by CLEF are two
-# estimates of the same object, see [2].
+# inspection of subfaces and masses
 
 # %%
 faces_dict, mass_dict = mlx.list_to_dict(damex_subfaces,
@@ -389,37 +390,32 @@ For this sample size, AIC appears to be more precise than cross-validation. Howe
 
 # %%
 # select epsilon with AIC and update model:
-ntests = 20
-vect_eps = np.geomspace(10**(-3), 1, num=ntests)
+neps = 20
+eps_vect = np.geomspace(10**(-3), 1, num=neps)
 eps_select_AIC, aic_opt, aic_values = clustering.select_epsilon_AIC(
-    vect_eps, X, plot=True, update_epsilon=False)
+    eps_vect, X, plot=True, update_epsilon=False)
 
 print('epsilon parameter selection (AIC):')
-print(mlx.round_signif(clustering.epsilon, 2))
+print(mlx.round_signif(eps_select_AIC, 2))
 
-# select epsilon with CV but don't update model in view of earlier findings.
-ntests = 20
-vect_eps = np.geomspace(10**(-3), 1, num=ntests)
+# select epsilon with CV but don't update model:
+eps_select_CV, _, _ = clustering.select_epsilon_CV(eps_vect, X, plot=True,
+                                                   update_epsilon=False)
 
-eps_select_CV, _, _ = clustering.select_epsilon_CV(vect_eps, X, plot=True,
-                                                   update_epsilon=True)
-
-print('epsilon parameter selection (CV):') 
+print('epsilon parameter selection (CV):')
 print(mlx.round_signif(eps_select_CV, 2))
 
-# check that epsilon stored in object is still AIC's one.
+# check that epsilon stored in object is still default one
 clustering.epsilon
 
 # %% [markdown]
-# ## wrapping up: comparison of all metrics 
+# ## wrapping up: comparison of all metrics:
 
 # %%
 # agreement with other metrics: 
 # recommended choice of epsilon here: by CV
 eps_select = eps_select_CV
-i_select = np.where(eps_select == vect_eps)[0][0]
-neps = 20
-eps_vect = np.geomspace(0.01, 1, num=neps)
+i_select = np.where(eps_select == eps_vect)[0][0]
 aic_vals = np.zeros(neps)
 deviance = np.zeros(neps)
 deviance_train = np.zeros(neps)
@@ -434,10 +430,7 @@ for i in range(neps):
                       include_singletons=include_singletons,
                       use_max_subfaces=use_max_subfaces)
     faces, masses = clust.fit(Xt, standardize=False)
- #   aic_masses[i] = clust.get_AIC_masses()  # /number_extremes
     aic_vals[i] = clust.get_AIC(Xt, standardize=False)
-    # clust.deviance(Xt, standardize=False) + \
-        # 2 * len(clust.masses)/number_extremes
     deviance[i] = clust.deviance(std_Xtest, standardize=False)
     deviance_train[i] = clust.deviance(Xt, standardize=False)    
     deviance_cv_scores = clust.deviance_CV(Xt, standardize=False,
