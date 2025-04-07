@@ -113,7 +113,7 @@ results happen for hardness ~ 0.8
 """
 
 # %%
-hardness = 0.5
+hardness = 0.9
 
 min_mus = np.zeros(k)
 for j in range(k):
@@ -234,11 +234,13 @@ number_extremes = np.sum(norm_Xt >= threshold )
 # %%
 #create a Damex clustering instance and fit it with default value epsilon=0.1.
 include_singletons = False
+use_max_subfaces = True
+min_counts = 0   # np.sqrt(number_extremes)
 # TODO explain
-clustering = mlx.damex(min_counts=np.sqrt(number_extremes)/5,
+clustering = mlx.damex(min_counts= min_counts,
                        thresh_train=threshold, thresh_test=threshold,
-                       include_singletons_train=include_singletons,
-                       include_singletons_test=include_singletons)
+                       include_singletons=include_singletons,
+                       use_max_subfaces=use_max_subfaces)
 damex_subfaces, damex_masses = clustering.fit(X)
 
 # %%
@@ -277,9 +279,6 @@ if Plot:
 # %%
 faces_dict, mass_dict = mlx.list_to_dict(damex_subfaces,
                                          damex_masses)
-faces_max_dict, mass_max_dict = mlx.list_to_dict(
-    clustering.maximal_subfaces, clustering.maximal_masses)
-# #clustering.construct_maximal_subfaces(X)
 
 faces_dict_true, mass_dict_true = mlx.list_to_dict(faces_true, wei_true)
 
@@ -288,10 +287,6 @@ if True:
     pp.pprint(faces_dict)
     print("(Damex) Associated limit mass:")
     print(mass_dict)
-    print("List of maximal subfaces found by DAMEX:")
-    pp.pprint(faces_max_dict)
-    print("(Damex) Associated limit maximal mass:")
-    print(mass_max_dict)
     print("True  list of subfaces: ")
     pp.pprint(faces_dict_true)
     print("(True) Associated limit mass:")
@@ -299,38 +294,67 @@ if True:
 
 # %% [markdown]
 # ## Unsupervised scoring.
-"""
-This material presents novel concepts, not yet supported by formal published theory, but intuitive and practical. It aids in evaluating goodness-of-fit, comparing different model variants (e.g., `min_counts > 0`, `use_max_subfaces`), and, most importantly, selecting the parameter `epsilon` (or `kappa_min` in CLEF). The ideas are related to Jorgensen's *Theory of Dispersion Models*.
+""" This material presents novel concepts, not yet supported by formal
+published theory, but intuitive and practical. It aids in evaluating
+goodness-of-fit, comparing different model variants (e.g., `min_counts
+> 0`, `use_max_subfaces`), and, most importantly, selecting the
+parameter `epsilon` (or `kappa_min` in CLEF). The ideas are related to
+Jorgensen's *Theory of Dispersion Models*.
 
-We introduce an unsupervised performance metric termed *Total Deviance*, inspired by Jorgensen's work. This metric relies on a unit deviance function \( d(\text{subface}_1, \text{subface}_2) \), defined as in Chiapino et al. as the ratio of the symmetric difference between the index sets of two subfaces to the cardinality of the union of these index sets.
+We introduce an unsupervised performance metric termed *Total
+Deviance*, inspired by Jorgensen's work. This metric relies on a unit
+deviance function \( d(\text{subface}_1, \text{subface}_2) \), defined
+as in Chiapino et al. as the ratio of the symmetric difference between
+the index sets of two subfaces to the cardinality of the union of
+these index sets.
 
-Given a unit deviance \( d \), the total deviance of an estimated pair (list of subfaces, list of masses) from Damex or CLEF, with respect to an extreme dataset, is computed as follows:
+Given a unit deviance \( d \), the total deviance of an estimated pair
+(list of subfaces, list of masses) from Damex or CLEF, with respect to
+an extreme dataset, is computed as follows:
 
-1. Each extreme point \( X_i \) is transformed into a binary vector using the same "mask" as in Damex/CLEF. For Damex, \( X_{i,j} = 1 \) if \( ||X_i|| > \text{threshold} \) and \( X_{i,j} > \epsilon \times \text{threshold} \); otherwise, \( X_{i,j} = 0 \). In CLEF, this condition applies with \( \epsilon = 1 \).
+1. Each extreme point \( X_i \) is transformed into a binary vector
+using the same "mask" as in Damex/CLEF. For Damex, \( X_{i,j} = 1 \)
+if \( ||X_i|| > \text{threshold} \) and \( X_{i,j} > \epsilon \times
+\text{threshold} \); otherwise, \( X_{i,j} = 0 \). In CLEF, this
+condition applies with \( \epsilon = 1 \).
 
-2. Each binary-transformed extreme point is identified with a subface by considering its non-zero entries as the indices defining the subface. This allows the definition of \( d(\text{subface}, X_i) \).
+2. Each binary-transformed extreme point is identified with a subface
+by considering its non-zero entries as the indices defining the
+subface. This allows the definition of \( d(\text{subface}, X_i) \).
 
-3. If \( (m_j, j \leq J) \) are the estimated subface masses from Damex, their weights are defined as \( p_j = m_j / \text{total\_mass} \), where `total_mass` is the total limit measure mass on the complementary set of the unit ball.
+3. If \( (m_j, j \leq J) \) are the estimated subface masses from
+Damex, their weights are defined as \( p_j = m_j / \text{total\_mass}
+\), where `total_mass` is the total limit measure mass on the
+complementary set of the unit ball.
 
 The total (log-)deviance is then defined as:
 
-$$
-\text{Deviance}(\text{subfaces}, \text{masses}, \text{data}) = -2 \times \sum_{i \leq n_{\text{extremes}}} \log \left( \sum_{j \leq J} p_j \exp(- \text{rate} \times d(X_i, \text{subface}_j)) \right)
-$$
+$$ \text{Deviance}(\text{subfaces}, \text{masses}, \text{data}) = -2
+\times \sum_{i \leq n_{\text{extremes}}} \log \left( \sum_{j \leq J}
+p_j \exp(- \text{rate} \times d(X_i, \text{subface}_j)) \right) $$
 
 Using this deviance, an AIC criterion is defined as:
 
-$$
-\text{AIC}(\text{subfaces}, \text{masses}, \text{training\_data}) = \text{Deviance}(\text{subfaces}, \text{masses}, \text{training\_data}) + 2 \times \frac{\text{number\_of\_subfaces}}{n_{\text{extremes}}}
-$$
+$$ \text{AIC}(\text{subfaces}, \text{masses}, \text{training\_data}) =
+\text{Deviance}(\text{subfaces}, \text{masses}, \text{training\_data})
++ 2 \times \frac{\text{number\_of\_subfaces}}{n_{\text{extremes}}} $$
 
 This represents the AIC divided by the sample size.
 
-Additionally, a cross-validation estimate of the Deviance (evaluated on a test set) is implemented. Both the AIC and cross-validation estimator aim to estimate the expected Deviance of the trained model on a test set.
+Additionally, a cross-validation estimate of the Deviance (evaluated
+on a test set) is implemented. Both the AIC and cross-validation
+estimator aim to estimate the expected Deviance of the trained model
+on a test set.
 
-Furthermore, since we can compute the deviance with respect to the true subfaces and masses, we can perform this calculation in both directions.
+Furthermore, since we can compute the deviance with respect to the
+true subfaces and masses, we can perform this calculation in both
+directions.
 
-Additionally, since we are working with simulated data, the implementations of Damex and CLEF include an option to compute the deviance of the estimated parameters (list of subfaces and list of masses) with respect to the true parameters (list of faces and list of weights), and vice versa.
+Additionally, since we are working with simulated data, the
+implementations of Damex and CLEF include an option to compute the
+deviance of the estimated parameters (list of subfaces and list of
+masses) with respect to the true parameters (list of faces and list of
+weights), and vice versa.
 
 """
 
@@ -338,35 +362,19 @@ Additionally, since we are working with simulated data, the implementations of D
 # Deviance to true parameters: 
 deviance_est_true, deviance_true_est = clustering.deviance_to_true(
     faces_true, wei_true)
-# same thing with maximal subfaces
-deviance_estmax_true, deviance_true_estmax = clustering.deviance_to_true(
-    faces_true, wei_true, use_max_subfaces=True)
 
 
 print("AIC deviance estimate of expected deviance:")
-print(clustering.get_AIC(Xt, use_max_subfaces=False, standardize=False))
-print("AIC, maximal faces only:")
-print(clustering.get_AIC(Xt, use_max_subfaces=True, standardize=False))
+print(clustering.get_AIC(Xt, standardize=False))
 
 print("CV estimate of expected deviance")
-print(np.mean(clustering.deviance_CV(Xt, use_max_subfaces=False,
-                                     standardize=False)))
-print("CV estimlate, maximal faces only:")
-print(np.mean(clustering.deviance_CV(Xt, use_max_subfaces=True,
-                                     standardize=False))
-)
+print(np.mean(clustering.deviance_CV(Xt, standardize=False)))
 print("test set  estimate of expected deviance")
-print(clustering.deviance(std_Xtest, use_max_subfaces=False,
-                          standardize=False))
-print("test set  estimate, maximal faces only:")
-print(clustering.deviance(std_Xtest, use_max_subfaces=True, standardize=False))
+print(clustering.deviance(std_Xtest, standardize=False))
 
 print("Deviances between faces, masses: \
 a) estimated to true b) true to estimated")
 print(deviance_est_true, deviance_true_est)
-print("Deviances between  maximal faces, masses: \
-a) estimated to true b) true to estimated")
-print(deviance_estmax_true, deviance_true_estmax)
 
 #%% [markdown]
 """
@@ -384,19 +392,17 @@ For this sample size, AIC appears to be more precise than cross-validation. Howe
 ntests = 20
 vect_eps = np.geomspace(10**(-3), 1, num=ntests)
 eps_select_AIC, aic_opt, aic_values = clustering.select_epsilon_AIC(
-    vect_eps, X, plot=False, update_epsilon=True)
+    vect_eps, X, plot=True, update_epsilon=False)
 
 print('epsilon parameter selection (AIC):')
 print(mlx.round_signif(clustering.epsilon, 2))
 
 # select epsilon with CV but don't update model in view of earlier findings.
-print(clustering.include_singletons_train)
-print(clustering.include_singletons_test)
 ntests = 20
 vect_eps = np.geomspace(10**(-3), 1, num=ntests)
 
-eps_select_CV, _, _ = clustering.select_epsilon_CV(vect_eps, X, plot=False,
-                                                   update_epsilon=False)
+eps_select_CV, _, _ = clustering.select_epsilon_CV(vect_eps, X, plot=True,
+                                                   update_epsilon=True)
 
 print('epsilon parameter selection (CV):') 
 print(mlx.round_signif(eps_select_CV, 2))
@@ -408,19 +414,12 @@ clustering.epsilon
 # ## wrapping up: comparison of all metrics 
 
 # %%
-# recommended choice of epsilon here: by AIC
+# agreement with other metrics: 
+# recommended choice of epsilon here: by CV
+eps_select = eps_select_CV
+i_select = np.where(eps_select == vect_eps)[0][0]
 neps = 20
 eps_vect = np.geomspace(0.01, 1, num=neps)
-local_clust = mlx.damex(epsilon=0.1, min_counts=np.sqrt(number_extremes)/5,
-                        thresh_train=threshold,
-                        thresh_test=threshold,
-                        include_singletons_test=include_singletons,
-                        include_singletons_train=include_singletons)
-eps_aic, deviance_aic, aic_vect = local_clust.select_epsilon_AIC(
-    eps_vect, Xt, standardize=False,  plot=False)
-
-# agreement with other metrics: 
-#aic_masses = np.zeros(neps)
 aic_vals = np.zeros(neps)
 deviance = np.zeros(neps)
 deviance_train = np.zeros(neps)
@@ -429,11 +428,11 @@ deviance_est_true = np.zeros(neps)
 deviance_true_est = np.zeros(neps)
 
 for i in range(neps):
-    clust = mlx.damex(epsilon=eps_vect[i], min_counts=np.sqrt(number_extremes)/5,
+    clust = mlx.damex(epsilon=eps_vect[i], min_counts=min_counts,
                       thresh_train=threshold,
                       thresh_test=threshold,
-                      include_singletons_train=include_singletons,
-                      include_singletons_test=include_singletons)
+                      include_singletons=include_singletons,
+                      use_max_subfaces=use_max_subfaces)
     faces, masses = clust.fit(Xt, standardize=False)
  #   aic_masses[i] = clust.get_AIC_masses()  # /number_extremes
     aic_vals[i] = clust.get_AIC(Xt, standardize=False)
@@ -442,7 +441,7 @@ for i in range(neps):
     deviance[i] = clust.deviance(std_Xtest, standardize=False)
     deviance_train[i] = clust.deviance(Xt, standardize=False)    
     deviance_cv_scores = clust.deviance_CV(Xt, standardize=False,
-                                           random_state=13+137*i, cv=2)
+                                           random_state=13+137*i, cv=5)
     deviance_cv[i] = np.mean(deviance_cv_scores)
     deviance_est_true[i], deviance_true_est[i] = clust.deviance_to_true(
         faces_true, wei_true)
@@ -459,7 +458,8 @@ if True:
                 label='deviance_est_true')
     plt.scatter(eps_vect, deviance_true_est, c='green',
                 label='deviance_true_est')
-    plt.plot([eps_aic, eps_aic], [0, deviance_aic], c='orange')
+    plt.plot([eps_select, eps_select], [0, deviance_true_est[i_select]],
+             c='orange')
     plt.legend()
     plt.title("DAMEX metrics sensitivity to epsilon")
     plt.show()

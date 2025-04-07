@@ -133,7 +133,7 @@ def estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
         mass = threshold * counts_subface / X.shape[0]
         mass_list.append(float(mass))
 
-    return mass_list
+    return np.array(mass_list)
 
 ##########################################
 # ## Information Criteria: Entropy, AIC
