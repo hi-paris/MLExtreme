@@ -35,6 +35,7 @@ def subfaces_list_to_matrix(subfaces, dimension):
 
     return matrix_subfaces  # [:, np.sum(matrix_subfaces, axis=0) > 0]
 
+
 def remove_zero_rows(binary_array):
     """
     Removes rows that contain only zeros from a binary matrix.
@@ -49,6 +50,7 @@ def remove_zero_rows(binary_array):
     # Remove rows where the sum of elements is zero (i.e., all
     # elements are zero)
     return binary_array[np.sum(binary_array, axis=1) > 0]
+
 
 def binary_large_features(std_data, radial_threshold, epsilon):
     """
@@ -94,6 +96,7 @@ def binary_large_features(std_data, radial_threshold, epsilon):
     # Convert the binary matrix to float type and remove zero rows
     return remove_zero_rows(binary_matrix.astype(int))
 
+
 def estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
                         standardize):
     """
@@ -122,8 +125,10 @@ def estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
 
     for k in range(len(subfaces_list)):
         subface = subfaces_matrix[k]
-        shared_features = np.dot(x_bin, subface.reshape(-1, 1))  # (num_extremes,1)
-        num_features_samples = np.sum(x_bin, 1).reshape(-1, 1)  # (num_extremes,1)
+        shared_features = np.dot(x_bin, subface.reshape(-1, 1))
+        # (num_extremes, 1)
+        num_features_samples = np.sum(x_bin, 1).reshape(-1, 1)
+        # (num_extremes, 1)
         num_features_subface = np.sum(subface)  # int
         sample_superset_of_subface = num_features_subface == shared_features
         sample_subset_of_subface = num_features_samples == shared_features
@@ -135,52 +140,6 @@ def estim_subfaces_mass(subfaces_list, X, threshold, epsilon,
 
     return np.array(mass_list)
 
-##########################################
-# ## Information Criteria: Entropy, AIC
-##########################################
-
-def entropy(masses, total_mass):
-    """
-    Calculates the entropy of a distribution defined by `masses`.
-
-    Parameters:
-    - masses (list or np.ndarray): List of masses.
-    - total_mass (float): Total mass of the distribution.
-
-    Returns:
-    - float: Entropy value.
-    """
-    k = len(masses)
-    if k <= 1:
-        return np.inf
-    if isinstance(masses, list):
-        masses = np.array(masses)
-    if total_mass is None:
-        total_mass = np.sum(masses)
-
-    distrib = masses[masses > 0] / total_mass
-    log_distrib = np.log(distrib)
-    neg_product = - distrib * log_distrib
-    return np.sum(neg_product)  # / np.log(k)
-
-def AIC_masses(masses, number_extremes, total_mass):
-    """
-    Calculates the Akaike Information Criterion (AIC) for a given
-    distribution of masses.
-
-    Parameters:
-    - masses (list or np.ndarray): List of masses.
-    - number_extremes (int): Number of extreme points.
-    - total_mass (float): Total mass of the distribution.
-
-    Returns:
-    - float: AIC value.
-    """
-    k = len(masses)
-    if k <= 1:
-        return 0
-    normalized_negative_log_likelihood = entropy(masses, total_mass=total_mass)
-    return 2 * (normalized_negative_log_likelihood + k/number_extremes)
 
 ##################################################
 # DAMEX functions
@@ -535,25 +494,6 @@ def find_maximal_faces(faces_dict, lst=True):
 # Generate Candidate Subfaces of Increased Size at Each CLEF Iteration
 ##################
 
-# def list_subfaces_to_bin_matrix(subfaces, dimension):
-#     """
-#     Converts a list of subface indices into a binary matrix.
-
-#     Args:
-#     - subfaces (list): List of subfaces.
-#     - dimension (int): Dimensionality of the ambient space.
-
-#     Returns:
-#     - np.ndarray: Binary matrix representation of subfaces.
-#     """
-#     num_subfaces = len(subfaces)
-#     vector_subfaces = np.zeros((num_subfaces, dimension))
-
-#     for subface_index, subface in enumerate(subfaces):
-#         vector_subfaces[subface_index, subface] = 1.0
-
-#     return vector_subfaces
-
 def make_graph(subfaces, size, dimension):
     """
     Creates a graph where nodes represent subfaces and edges exist if subfaces
@@ -716,86 +656,27 @@ def clef_estim_subfaces_mass(subfaces_list, X, threshold,
                               standardize=standardize)
     return res
 
-def clef_select_kappa_AIC(vect_kappa, X, radial_threshold,
-                          # include_singletons=True,
-                          standardize,
-                          unstable_kappa_max=0.05, plot=False):
-    """
-    Selects the optimal kappa value based on AIC.
-
-    Parameters:
-    - vect_kappa (list): List of kappa values to test.
-    - X (np.ndarray): Input data.
-    - radial_threshold (float): Radius threshold for identifying extreme
-      samples.
-    - standardize (bool): Whether to standardize the data.
-    - unstable_kappa_max (float): Maximum kappa value for unstable solutions.
-    - plot (bool): Whether to plot the AIC values.
-
-    Returns:
-    - float: Selected kappa value.
-    """
-    if standardize:
-        radii = np.max(rank_transform(X), axis=1)
-    else:
-        radii = np.max(X, axis=1)
-    num_extremes = np.sum(radii >= radial_threshold)
-    total_mass = radial_threshold * num_extremes / X.shape[0]
-    ntests = len(vect_kappa)
-    vect_aic = np.zeros(ntests)
-    counter = 0
-    for kappa in vect_kappa:
-        clef_faces = clef_fit(X, radial_threshold, kappa, standardize=standardize,
-                          include_singletons=False)
-        list_of_masses = clef_estim_subfaces_mass(clef_faces, X,
-                                                  radial_threshold,
-                                                  standardize=standardize)
-        vect_aic[counter] = AIC_masses(list_of_masses, num_extremes,
-                                           total_mass)
-        # selection based on AIC
-        # vect_aic below is
-        # proportional to : - log-likelihood(categorical model) + k where k
-        # is the number of categories, ie the number of subfaces.
-        # vect_aic = vect_entropy + vect_number_faces / num_extremes
-        counter += 1
-
-    i_maxerr = np.argmax(vect_aic[vect_kappa < unstable_kappa_max])
-    kappa_maxerr = vect_kappa[i_maxerr]
-    i_mask = vect_kappa <= kappa_maxerr
-    i_minAIC = np.argmin(vect_aic + (1e+23) * i_mask)
-    kappa_select_aic = vect_kappa[i_minAIC]
-
-    if plot:
-        plt.figure(figsize=(10, 5))
-        plt.xlabel('kappa_min')
-        plt.ylabel('AIC')
-        plt.title('AIC versus kappa_min')
-        plt.scatter(vect_kappa, vect_aic, c='gray', label='AIC')
-        plt.plot([kappa_select_aic, kappa_select_aic],
-                 [0, max(vect_aic)], c='red')
-        plt.grid(True)
-        plt.show()
-
-    print(f'CLEF: selected kappa_min with AIC method: \
-        {round_signif(kappa_select_aic, 2)}')
-    return kappa_select_aic
 
 ##################################################
-# Feature clusters analysis: distance, deviance, ...
+# Feature clusters analysis: unit deviance, total deviance,
+# dispersion model ...
 # previously in ftclust_analysis
 ##################################################
 
-def setDistance_subface_to_matrix(subface, subfaces_matrix):
-    """
-    Calculates set distances `s` between one subface and a matrix of
+def unit_deviance(subface, subfaces_matrix):
+    """Calculates unit deviances `s` between one subface and a matrix of
     (binary encoded) subfaces.
 
-    The set distance `s` between any two subfaces is defined as the
+    The unit deviance `s` between any two subfaces is defined as the
     ratio between the cardinalities of the symmetric difference and
     the union of the two sets.
 
     This is the key ingredient of the unsupervised performance
     criterion s(list_of_subsets, binary_encoded_new_point) proposed in [1]
+
+    In the present impleemntation it is the basic building block of
+    the total deviance, which serves as convenient unsupervised
+    criterion for parameter tuning.
 
     Parameters:
     - subface (np.ndarray): Single subface vector (binary vector), typically
@@ -812,61 +693,49 @@ def setDistance_subface_to_matrix(subface, subfaces_matrix):
     [1] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying groups of
     variables with the potential of being large simultaneously.
     Extremes, 22, 193-222.
+
     """
     result = (np.sum(abs(subface - subfaces_matrix), axis=1) /
               np.sum(subface + subfaces_matrix > 0, axis=1))
 
     return result
 
-# def setDistance_subface_to_list(subface, subfaces_list, normalize=True):
-#     """
-#     Computes the pseudo-Subface distance between one subface and a
-#     matrix of subfaces.
+def total_deviance_binary_matrices(subfaces_matrix, masses,
+                                   subfaces_reference_matrix,
+                                   reference_masses, 
+                                   rate):
+    """Computes the total deviance between all rows of
+    subfaces_matrix and the matrix subfaces_reference_matrix,
+    normalized by the sample size, which is the number of rows in
+    subfaces_matrix, or by a weight vector if `mass` is provided
+    representing weight of each observation in subfaces_matrix.
 
-#     Args:
-#     - subface (np.ndarray): Single subface vector.
-#     - subfaces_list (list): list of subface vectors
-
-#     Returns:
-#     - np.ndarray: Array of distances.
-#     """
-#     subfaces_matrix = ut.subfaces_list_to_matrix(subfaces_list)
-#     return setDistance_subface_to_matrix(subface, subfaces_matrix, normalize)
-
-def setDistance_error_m2m(subfaces_matrix, masses, subfaces_reference_matrix,
-                          reference_masses, total_reference_mass,
-                          dispersion_model, rate):
-    """
-    Computes the average aggregated set distance between all rows of
-    subfaces_matrix and the matrix subfaces_reference_matrix.
-
-    The result is a weighted average of the aggregated set distances,
-    weighted by the corresponding rescaled `mass` entry in the
-    considered subfaces in `subface_matrix'.
-
-    If dispersion_model is True (default): agregation is done by considering
-    the pseudo-likelihood (density) of a row in subfaces_matrix,
-    within a mixture model defined in the set of subfaces, as follows:
+    The total deviance is relative to a dispersion_model. It is the
+    (normlaized) negative log-likelihood of the rows in
+    subfaces_matrix, within a mixture model defined in the set of
+    subfaces, as follows:
 
         - each row in subfaces_reference_matrix is a 'center of mass'
         - the references_masses are the (unnormalized) weights of the mixture
 
     - Given that row_i in subfaces_matrix was generated by the mixture
-            component reference_row_j in subfaces_reference_matrix, the set
-            distance (see setDistance_subface_to_matrix) between row_i and
-            reference_row_j follows an exponential distribution with rate
-            `rate`. The likelihood term disregards any necessary normalizing
-            constants, such as those accounting for the truncation of the
-            exponential model or the combinatorial number of subfaces at a
-            given set distance from reference_row_j
+            component reference_row_j in subfaces_reference_matrix,
+            the unit deviance (see `unit_deviance`) between row_i and
+            reference_row_j follows an exponential distribution with
+            rate `rate`. The likelihood term disregards any necessary
+            normalizing constants, such as those accounting for the
+            truncation of the exponential model or the combinatorial
+            number of subfaces at a given set distance from
+            reference_row_j, which would be necessary in principle to
+            define a proper dispersion model "à la Jorgensen'.
 
     In unsupervised usages:
         - subfaces_reference_matrix is typically issued from prior
-    estimation from damex or clef
+    estimation from DAMEX or CLEF
         - subfaces_matrix is typically a dataset
 
     In supervised usage:
-        both subfaces_matrix and subfaces_reference matrix are issued from a
+        Both subfaces_matrix and subfaces_reference matrix are issued from a
         list of true or estimated subfaces and the goal is to assess the
         'distance' between the two.
 
@@ -878,127 +747,82 @@ def setDistance_error_m2m(subfaces_matrix, masses, subfaces_reference_matrix,
     - subfaces_reference_matrix (np.ndarray): Reference matrix of subfaces.
     - reference_masses (list or np.ndarray): Masses associated with reference
       subfaces.
-    - total_reference_mass (float): Total mass of reference subfaces.
-    - dispersion_model (bool): Whether to use a dispersion model.
     - rate (float, >0): Rate parameter for deviance calculation.
 
     Returns:
     - float: Average aggregated set distance.
+
     """
     n_subfaces = np.shape(subfaces_matrix)[0]
     if n_subfaces == 0:
         return 0
-    min_dists = 10 * np.ones(n_subfaces)
+    neg_log_likelihood = 10 * np.ones(n_subfaces)
     if masses is None:
         weights = np.ones(n_subfaces)/n_subfaces
     else:
         if isinstance(masses, list):
             masses = np.array(masses)
         weights = masses / np.sum(masses)
-    if not dispersion_model:
-        for i in range(n_subfaces):
-            dists = setDistance_subface_to_matrix(subfaces_matrix[i],
-                                                  subfaces_reference_matrix)
+    if reference_masses is None:
+        warnings.warn('No reference masses provided. \
+        Using uniform weights by default.')
+        nsub_ref = subfaces_reference_matrix.shape[0]
+        reference_masses = np.ones(nsub_ref)/nsub_ref
 
-            min_dists[i] = np.min(dists)
+    if isinstance(reference_masses, list):
+        reference_masses = np.array(reference_masses)
 
-    else:  # in this case return the deviance in a mixture model on subsets
-        if reference_masses is None:
-            warnings.warn('No reference masses provided. \
-            Using uniform weights by default.')
-            nsub_ref = subfaces_reference_matrix.shape[0]
-            reference_masses = np.ones(nsub_ref)/nsub_ref
+    total_reference_mass = np.sum(reference_masses)
+    ref_weights = reference_masses/total_reference_mass \
+        if total_reference_mass > 0 else reference_masses
 
-        if isinstance(reference_masses, list):
-            reference_masses = np.array(reference_masses)
+    for i in range(n_subfaces):
+        unit_deviance_vect = unit_deviance(subfaces_matrix[i],
+                                           subfaces_reference_matrix)
+        mixture_likelihood = np.sum(ref_weights *
+                                    np.exp(- rate * unit_deviance_vect))
+        
+        if mixture_likelihood > 0:
+            neg_log_likelihood[i] = - np.log(mixture_likelihood)
+        else:
+            # Handle the case where mixture_likelihood is zero
+            neg_log_likelihood[i] = np.inf
+            
+    # return negative log-likelihood, normalized by sample size or
+    # sample's weights
+            
+    return np.sum(neg_log_likelihood * weights)
 
-        if total_reference_mass is None:
-            warnings.warn('No total mass  provided. \
-            Using sum of reference masses by default.')
-            total_reference_mass = np.sum(reference_masses)
-
-        ref_weights = reference_masses / total_reference_mass
-
-        for i in range(n_subfaces):
-            dists = setDistance_subface_to_matrix(subfaces_matrix[i],
-                                                  subfaces_reference_matrix)
-            sum_value = np.sum(ref_weights * np.exp(- rate * dists))
-
-            if sum_value > 0:
-                min_dists[i] = - np.log(sum_value)
-            else:
-                # Handle the case where sum_value is zero
-                min_dists[i] = np.inf  # or some other appropriate value
-            # min_dists[i] = - np.log(
-            # np.sum(ref_weights * np.exp(- 15 * dists**2)))
-
-    return np.sum(min_dists * weights)
-
-def setDistance_error_l2l(subfaces_list, masses, subfaces_reference_list,
-                          reference_masses, total_reference_mass,
-                          dimension,
-                          dispersion_model, rate
-                          ):
-    """
-    Computes the average minimum set distance between
-     all entries of subfaces_list and the reference list
-    subfaces_reference_list.
-
-    The results is a weighted average of the minimum set distances,
-    weighted by the corresponding normalized `mass` entry in the
-    considered subfaces in `subfaces_list'.
-
-    The lower, the better.
-
-    Parameters:
-    - subfaces_list (list): List of subfaces.
-    - masses (list or np.ndarray): Masses associated with subfaces.
-    - subfaces_reference_list (list): Reference list of subfaces.
-    - reference_masses (list or np.ndarray): Masses associated with reference
-      subfaces.
-    - total_reference_mass (float): Total mass of reference subfaces.
-    - dimension (int): Dimensionality of the space.
-    - dispersion_model (bool): Whether to use a dispersion model.
-    - rate (float, >0): Rate parameter for deviance calculation.
-
-    Returns:
-    - float: Average minimum set distance.
-    """
-    if len(subfaces_list) == 0:
-        return 0
-    if len(subfaces_reference_list) == 0:
-        return float('inf')
-    subfaces_matrix = subfaces_list_to_matrix(subfaces_list, dimension)
-    subfaces_reference_matrix = subfaces_list_to_matrix(
-        subfaces_reference_list, dimension)
-    return setDistance_error_m2m(subfaces_matrix, masses,
-                                 subfaces_reference_matrix,
-                                 reference_masses, total_reference_mass,
-                                 dispersion_model, rate)
 
 ##################################
-# For unsupervised evaluation ###
+# For unsupervised evaluation: unit deviance, total deviance in a
+# dispersion model###
 #################################
 
-def setDistance_subfaces_data(subfaces_list,  threshold, std_data,
-                              #remove_singletons_train,
-                              include_singletons_test,
-                              epsilon, masses, total_mass,
-                              dispersion_model,
-                              rate):
-    """
-    Calculates the average set Distance distance between a list of
-    subfaces and a matrix of rank transformed data.
+def total_deviance(subfaces_list, masses, std_data, threshold,
+                   include_singletons_test, epsilon, rate):
+    """Calculates the total deviance for the estimated parameter
+    (list of subfaces, list of masses), evaluated on  the multivariate
+    peaks-over-threshold of a preliminary standardized dataset
+    std_data.  The total deviance is normalized by the number of
+    extreme samples in std_data
 
     Parameters:
     - subfaces (list): List of subfaces.
-    - threshold (float): Radius for selection of extremes in std_data
+
+    - masses (array): associated masses
+
     - std_data (np.ndarray): Standardized data.
-    - include_singletons_test: if False, disregards events where a single feature
-      is large (suitable for analysising concomittant events)
+
+    - threshold (float): Radius for selection of extremes in std_data
+
+    - include_singletons_test: if False, disregards events where a
+      single feature is large (suitable for analysising concomittant
+      events)
 
     Returns:
     - float: Average distance.
+
     """
     if len(subfaces_list) == 0:
         return float('inf')
@@ -1011,35 +835,23 @@ def setDistance_subfaces_data(subfaces_list,  threshold, std_data,
     if isinstance(masses, list):
         masses = np.array(masses)
 
-    if dispersion_model:
-        if masses is None:
-            warnings.warn('No masses given for subfaces_list.\
-            Estimating on test dataset and proceeding ...')
-            masses = estim_subfaces_mass(subfaces_list, std_data, threshold,
-                                         epsilon, standardize=False)
-        if total_mass is None:
-            warnings.warn('No total mass provided for the angular measure.\
-            Estimating on the test set and proceeding ...')
-            total_mass = threshold * binary_data.shape[0] / std_data.shape[0]
-
     if not include_singletons_test:
         id_keep_data = np.where(np.sum(binary_data, axis=1) >= 2)[0]
         binary_data = binary_data[id_keep_data]
 
-    # if remove_singletons_train:
-    #     id_keep_estim = np.where(np.sum(subfaces_matrix, axis=1) >= 2)[0]
-    #     subfaces_matrix = subfaces_matrix[id_keep_estim]
-    #     if masses is not None:
-    #         masses = masses[id_keep_estim]
+    if masses is None:
+        warnings.warn('No masses given for subfaces_list.\
+        Estimating on test dataset and proceeding ...')
+        masses = estim_subfaces_mass(subfaces_list, std_data, threshold,
+                                     epsilon, standardize=False)
 
-    error_data_to_estim = setDistance_error_m2m(
+    Deviance = total_deviance_binary_matrices(
         subfaces_matrix=binary_data, masses=None,
         subfaces_reference_matrix=subfaces_matrix,
-        reference_masses=masses, total_reference_mass=total_mass,
-        dispersion_model=dispersion_model, rate=rate
-    )
+        reference_masses=masses, rate=rate)
 
-    return error_data_to_estim  # max(estim_to_data, data_to_estim)
+    return Deviance
+
 
 #################################
 # ##### previously in damex
@@ -1136,7 +948,8 @@ def ftclust_cross_validate(X, standardize, algo, tolerance,
             continue
         # Split the data into training and testing sets
         X_train, X_test = Xt[train_index], Xt[test_index]
-        total_mass_train = thresh_train * size_train_ex/len(train_index)
+        # total_mass_train = thresh_train * size_train_ex/len(train_index)
+
         #  fit the model
         if algo == 'clef':
             Subfaces = clef_fit(X_train, thresh_train, kappa_min=tolerance,
@@ -1173,12 +986,10 @@ def ftclust_cross_validate(X, standardize, algo, tolerance,
         else:
             raise ValueError("algo must be either`damex` or `clef`")
 
-        clust_error = setDistance_subfaces_data(
-            Subfaces, thresh_test, X_test,
-            #remove_singletons_train=not include_singletons_train,
+        clust_error = total_deviance(
+            Subfaces, Masses,  X_test, thresh_test,
             include_singletons_test=include_singletons_test,
-            epsilon=epsilon_val, masses=Masses,
-            total_mass=total_mass_train, dispersion_model=True,
+            epsilon=epsilon_val,
             rate=rate)
 
         scores.append(clust_error)
@@ -1188,6 +999,7 @@ def ftclust_cross_validate(X, standardize, algo, tolerance,
 # thresh_train=None,
 # thresh_test=None, include_singletons_train=False,
 # include_singletons_test=False,  **kwargs):
+
 
 def ftclust_choose_tolerance_cv(tolerance_grid, X, standardize, algo,
                                 unstable_tol_max, min_counts,

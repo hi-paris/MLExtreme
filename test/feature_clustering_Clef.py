@@ -5,50 +5,58 @@
 # # CLEF tutorial
 
 # %% [markdown]
-"""Implements the  CLEF algorithm in [1,2].
-The considered unsupervised task is to discover the groups of components of a
-random vector which are comparatively likely to be simultaneously large. Compared with DAMEX, the main difference is that the subsets are constructed in an incremental manner. The goal is to prevent false discoveries of subsets. For a comparison between CLEF  and DAMEX? see the `compare_clef_damex` tutorial. 
+"""This notebook implements the CLEF algorithm as described in [1,
+2]. The unsupervised task considered is the discovery of maximal
+groups of components of a random vector that are comparatively likely
+to be simultaneously large. Unlike DAMEX, the primary distinction is
+that the subsets are constructed incrementally.  The goal is to
+prevent false discoveries of subsets.Another difference is the CLEF is
+not design to recover singleton features.  For a comparison between
+CLEF and DAMEX, refer to the `compare_clef_damex` tutorial.
 
-The tutorial proposes new methods to choose the tuning parameter kappa
- in CLEF, mainly based on AIC and cross-validation, and involving a
- specific pseudo-likelihood (a dispersion metric `al la Jorgensen')
- for (random) subsets of features among {1, ..., d}. Although those
- methods have not been investigated in theory, this notebook provides
- some empirical evidence of the relevance of the proposed selection
- criteria. See DAMEX tutorial for details.
+The tutorial relies new methods for selecting the tuning parameter
+$\kappa$ in CLEF, primarily based on AIC and cross-validation. These
+methods involve a specific pseudo-likelihood (a dispersion metric à la
+Jorgensen) for random subsets of features among $\{1, \ldots,
+d\}$. Although these methods lack theoretical investigation, this
+notebook provides empirical evidence supporting the relevance of the
+proposed selection criteria. See the DAMEX tutorial for further
+details.
 
-Alternative stopping criteria for CLEF as proposed in [2]
-are currently not implemented.
+Alternative stopping criteria for CLEF, as proposed in [2], are
+currently not implemented.
 
-[1] Chiapino, M., & Sabourin, A.  Feature clustering for extreme
-events analysis, with application to extreme stream-flow data. In
-International workshop on new frontiers in mining complex patterns
-(pp. 132-147). Cham: Springer International Publishing.
+**References:**
 
-[2] Chiapino, M., Sabourin, A., & Segers, J. (2019).  Identifying
+[1] Chiapino, M., & Sabourin, A. (2016). Feature clustering for
+extreme events analysis, with application to extreme stream-flow
+data. In *International Workshop on New Frontiers in Mining Complex
+Patterns* (pp. 132-147). Cham: Springer International Publishing.
+
+[2] Chiapino, M., Sabourin, A., & Segers, J. (2019). Identifying
 groups of variables with the potential of being large
-simultaneously. Extremes, 22, 193-222.
+simultaneously. *Extremes, 22*, 193-222.
 
 """
 
 
 # %%
 # # Set working directory if necessary
-# import os
-# os.getcwd()
+import os
+os.getcwd()
 # #os.chdir("../")
+
 # %% 
-import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint as pp
 import MLExtreme as mlx
-import pdb
+
 
 # Define the norm function as the infinite norm (other norms are not
-# implemented in DAMEX / CLEF), also defining this norm function is
-# not needed for running clef/damex, only unsed her for visualisation
-# and analysis of the output.
+# implemented in DAMEX / CLEF). This definition is not required for
+# running CLEF/DAMEX and is used here solely for visualization and
+# analysis of the output.
 
 def norm_func(x):
     return np.max(x, axis=1)
@@ -56,8 +64,8 @@ def norm_func(x):
 
 # %% [markdown]
 # ## Ground truth definition:
-# Define or draw a list of subfaces of the unit sphere defining the
-# support of the limit measure.
+# Define or generate a list of subfaces of the unit sphere that
+# represent the support of the limit measure.
 
 # %%
 Plot = True
@@ -67,10 +75,10 @@ num_subfaces = 10  # try 5, 20, 50
 subfaces_list = mlx.gen_subfaces(dimension=dim,
                                  num_subfaces=num_subfaces,
                                  max_size=5,  # try 4, 10, 20
-                                 prevent_inclusions=False,
+                                 prevent_inclusions=True,
                                  seed=seed)
 
-# # uncomment for a simpler example:
+# # Uncomment for a simpler example:
 # subfaces_list = [[0, 1], [1, 2], [2, 3, 4]]
 
 if False:   # change to True to print the list of subfaces
@@ -79,93 +87,96 @@ if False:   # change to True to print the list of subfaces
 
 subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list, dim)
 #print(subfaces_matrix)
-# dimension, number of mixture components, weights and Dirichlet center locations 
+# Dimension, number of mixture components, weights and Dirichlet center locations 
 n = int(np.sqrt(dim) * 10**3)
 k = np.shape(subfaces_matrix)[0]
 dim = np.shape(subfaces_matrix)[1]
-# Define admissible dirichlet mixture parameters  (for the limit angular measure
-# of a Pareto - marginally - standardized  heavy-tailed vector, based on
-# the matrix of subfaces. Avoids potentially imbalanced settings accross features
+# Define admissible Dirichlet mixture parameters for the limit angular measure
+# of a marginally Pareto-standardized heavy-tailed vector,
+# based on the matrix of subfaces.
+# This avoids potentially imbalanced settings across features.
 wei = np.ones(k)/k
 Mu, wei = mlx.normalize_param_dirimix(subfaces_matrix, wei)
-# just printing the subfaces and their weight and
-# recording it as a list for further usage
+# Print the subfaces and their weights, and record them as a list
+# for further use.
 faces_true = subfaces_list
 wei_true = wei
 print(f'Mu matrix: \n {np.round(Mu, 3)}')
 print(f'Weights: {np.round(wei, 3)}')
 
 # %% [markdown]
-# ### Hardness settings for the tail problem 
+# ### Difficulty Settings for the Tail Problem
+
+# %% [markdown]
 """
-` lnu ` parameter below is the logarithm of the concentration
-parameter for the Dirichlet mixture.  it is a crucial parameter
-which determines the 'hardness' of the clustering problem.  If any
-exp(lnu[i)) * Mu[i,j] <1 the problem is pathologicallly hard, in the
-sense that the mass on any subface concentrates ON THE BOUNDARY of
-that face On the contrary if all exp(lnu[i)) * Mu[i,j] >> 1, the
-problem is very easy.
+The `lnu` parameter below is the logarithm of the concentration
+parameter for the Dirichlet mixture. It is a crucial parameter that
+determines the difficulty of the clustering problem. If any
+$\exp(\text{lnu}[i]) \times \text{Mu}[i,j] < 1$, the problem is
+pathologically hard, as the mass on any subface concentrates on the
+boundary of that face. Conversely, if all $\exp(\text{lnu}[i]) \times
+\text{Mu}[i,j] \gg 1$, the problem is very easy.
 
-Play around with 'hardness' parameter below, which should be
+Experiment with the 'difficulty' parameter below, which should be
 strictly positive. Values greater than one correspond to very hard
-problems, values close to zero generate very easy problems. Interesting
-results happen for hardness ~ 0.8
-
+problems, while values close to zero generate very easy
+problems. Interesting results occur for difficulty $\approx 0.8$.
 """
 
 # %%
-hardness = 0.9
+difficulty = 0.8
 
 min_mus = np.zeros(k)
 for j in range(k):
-    min_mus[j] = np.min(Mu[j, Mu[j, :] > 0 ])
-lnu = np.log(1/(hardness**2) * 1/min_mus )
-# check (change to True the condition below to display)
+    min_mus[j] = np.min(Mu[j, Mu[j, :] > 0])
+lnu = np.log(1/(difficulty**2) * 1/min_mus)
+# check (change to True  to display)
 if False:
     print("absolute dirichlet parameters: ")
     print(Mu * np.exp(lnu).reshape(-1, 1))
 
 
 # %% [markdown]
-"""
-Other parameter setting governing the speed of convergence of the
-conditional distribution above a radial threshold towards the limit
-measure.
-"""
+""" Other parameter settings that govern the speed of convergence of
+the conditional distribution above a radial threshold towards the
+limit measure.  """
 
 # %%
-# regular variation index of the data
-alpha = 2  
+# Regular variation index of the data
+alpha = 2
 
-# centers of mass of the Dirichlet mixture in the bulk (vanishing impact above large radial thresholds): 
+# Centers of mass of the Dirichlet mixture in the bulk (vanishing impact above large radial thresholds):
 Mu_bulk = np.ones((k, dim))/dim
 
-# `index_weight_noise' below how fast the impact of noise decreases
-# with large radiial thresholds. Namely, the noise 's weight decreases
-# as :  (C/radius)**index_weight_noise
+# %% [markdown]
+#  `index_weight_noise` below indicates how fast the impact of noise decreases
+# with large radial thresholds. Specifically, the noise's weight decreases as:
+# $(C/\text{radius})^{\text{index\_weight\_noise}}$
+
+# %%
 index_weight_noise = 4 
 
 # %% [markdown]
-# ### Dataset generation and visualisation
+# ### Dataset Generation and Visualisation
 
 # %%
-# generate data 
+# Generate data 
 np.random.seed(42)
 X = mlx.gen_rv_dirimix(alpha, np.round(Mu, 3),  wei, lnu,
                        scale_weight_noise=1, Mu_bulk=Mu_bulk,
                        index_weight_noise=index_weight_noise, size=n)
 
 
-# define rank-transformed data
+# Define rank-transformed data
 Xt = mlx.rank_transform(X)
 
-# generate test data for unsupervised evaluation
+# Generate test data for unsupervised evaluation
 np.random.seed(12345)
 Xtest = mlx.gen_rv_dirimix(alpha, np.round(Mu, 3),  wei, lnu,
                            scale_weight_noise=1, Mu_bulk=Mu_bulk,
                            index_weight_noise=index_weight_noise, size=5*n)
 
-# define rank-trainsformed test data 
+# Define rank-transformed test data
 std_Xtest = mlx.rank_transform(Xtest)
 
 # %%
@@ -177,39 +188,38 @@ jplot = subfaces_list[r_i][1]
 
 if Plot:
     plt.figure(figsize=(10, 10))
-    X_disp = X**(alpha/4)  # for easier viz only 
+    X_disp = X**(alpha/4)  # for easier visualization only
     max_val = np.max(X_disp)
     scatter = plt.scatter(X_disp[:, iplot], X_disp[:, jplot], alpha=0.5)
     plt.xlim(0, max_val)
     plt.ylim(0, max_val)
     plt.xlabel('Feature 1')
     plt.ylabel('Feature d')
-    plt.title('Scatter Plot of the raw  dataset')
+    plt.title('Scatter Plot of the raw dataset')
     plt.show()
 
 # %%
-# rank transformed  generated data with  unit pareto margins
+# Rank transformed  generated data with  unit Pareto margins
 # and visualization
 if Plot:
     plt.figure(figsize=(10, 10))
-    X_disp = Xt**(1/4)  # for easier viz only
+    X_disp = Xt**(1/4)  # for easier visualization only
     max_val = np.max(X_disp)
     scatter = plt.scatter(X_disp[:, iplot], X_disp[:, jplot], alpha=0.5)
     plt.xlim(0, max_val)
     plt.ylim(0, max_val)
     plt.xlabel('Feature 1')
     plt.ylabel('Feature d')
-    plt.title('Scatter Plot of the  rank transformed dataset')
+    plt.title('Scatter Plot of the rank transformed dataset')
     plt.show()
 
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # %% [markdown]
 # # Data Analysis
 # ## Radial threshold selection before model fitting
 
 # %%
-# selecting the radial threshold via distance-covariance tests,
-#see supervised tutorials for more details.
+# Select the radial threshold via distance-covariance tests.
+# See the tutorials on classification and regression for more details.
 ntests_thresh = 10
 ratio_ext = np.geomspace(0.05, 0.3, num=ntests_thresh)
 pval, ratio_max = mlx.test_indep_radius_rest(Xt, y=None, ratio_ext=ratio_ext,
@@ -222,28 +232,21 @@ print(f'maximum ratio of extreme samples from rule-of-thumb \
 distance covariance test: {mlx.round_signif(ratio_max, 2)}')
 ratio_extremes = ratio_max * 4/5
 norm_Xt = norm_func(Xt)
-# radial threshold selected with rule-of-thumb radius-versus-rest
+# Radial threshold selected with rule-of-thumb radius-versus-rest
 # independence tests:
-threshold  = np.quantile(norm_Xt, 1 - ratio_extremes)
-# Beware the following is not 'k' in the notations of Goix et al's paper.
-# Instead  it is comprised between k and d * k. It is the number of data points
-# above the radial threshold. 
-number_extremes = np.sum(norm_Xt >= threshold )
+threshold = np.quantile(norm_Xt, 1 - ratio_extremes)
+# Note: The following is not 'k' in the notations of Goix et al.'s paper.
+# Instead, it is between k and d * k. It is the number of data points above the radial threshold.
+number_extremes = np.sum(norm_Xt >= threshold)
 
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-#
+# %%%%%%%%%%%%%%%%%%%
 # %% [markdown]
 # # CLEF CLUSTERING ALGORITHM (Chiapino et al. , [1,2])
 
 
 # %%
-#create a CLEF clustering instance and fit it with default value epsilon=0.1.
-include_singletons = False
-# TODO explain. never set this to true!! 
-clusteringClef = mlx.clef(thresh_train=threshold, thresh_test=threshold,
-                          include_singletons=include_singletons)
-
+#create a CLEF clustering instance and fit it with default value kappa_min=0.1.
+clusteringClef = mlx.clef(thresh_train=threshold, thresh_test=threshold)
 clef_subfaces, clef_masses = clusteringClef.fit(X)
 
 # %%
@@ -262,9 +265,11 @@ if Plot:
     plt.plot([thresh_disp, thresh_disp], [0, thresh_disp], c='blue',
              label='radial threshold')
     plt.plot([0, thresh_disp], [thresh_disp, thresh_disp], c='blue')
-    plt.plot([thresh_disp, max_val], [eps_thresh_disp, eps_thresh_disp], c='red',
+    plt.plot([thresh_disp, max_val], [eps_thresh_disp, eps_thresh_disp],
+             c='red',
              label='tolerance distance-to-subface threshold')
-    plt.plot([eps_thresh_disp, eps_thresh_disp], [thresh_disp, max_val], c='red')
+    plt.plot([eps_thresh_disp, eps_thresh_disp], [thresh_disp, max_val],
+             c='red')
     plt.xlabel('Feature 1')
     plt.ylabel('Feature d')
     plt.title('Scatter Plot of the rank_transformed  dataset and \
@@ -274,12 +279,7 @@ if Plot:
 
 
 # %% [markdown]
-# inspection of subfaces and masses, with the option of
-# considering maximal subfaces (for inclusion) only, to facilitate
-# further comparison with CLEF. Indeed in principle, the maximal
-# subfaces issued by DAMEX and subfaces issued by CLEF are two
-# estimates of the same object, see [2].
-
+# inspection of subfaces and masses
 # %%
 faces_dict_clef, mass_dict_clef = mlx.list_to_dict(clef_subfaces,
                                                    clef_masses)
@@ -291,10 +291,6 @@ if True:
     pp.pprint(faces_dict_clef)
     print("(CLEF) Associated limit mass:")
     print(mass_dict_clef)
-    # print("List of maximal subfaces found by DAMEX:")
-    # pp.pprint(faces_max_dict)
-    # print("(Damex) Associated limit maximal mass:")
-    # print(mass_max_dict)
     print("True  list of subfaces: ")
     pp.pprint(faces_dict_true)
     print("(True) Associated limit mass:")
@@ -333,14 +329,14 @@ observed here.  """
 
 # %%[markdown]#
 # ## Choosing Epsilon based on AIC / CV
-# here and below we propose choosing epsilon in DAMEX using the AIC
-# criterion. A CV-based selection rule is also implemented (here
-# we retain the CV selection rule in the end)
+# Here and below we propose choosing epsilon in DAMEX using the AIC
+# criterion and  a CV-based selection rule (here
+# we retain the CV selection rule in the end). 
 
 # %%
 # select kappa_min with AIC but don't update model:
 nkappa = 20
-kappa_vect = np.geomspace(10**(-3), 1, num=nkappa)
+kappa_vect = np.geomspace(10**(-3), 0.5, num=nkappa)
 kappa_select_AIC, aic_opt, aic_values = clusteringClef.select_kappa_min_AIC(
     kappa_vect, X, update_kappa_min=False, plot=True)
 
@@ -375,8 +371,7 @@ deviance_true_est = np.zeros(nkappa)
 
 for i in range(nkappa):
     clust = mlx.clef(kappa_min=kappa_vect[i], thresh_train=threshold,
-                     thresh_test=threshold,
-                     include_singletons=include_singletons)
+                     thresh_test=threshold)
     faces, masses = clust.fit(Xt, standardize=False)
     aic_vals[i] = clust.get_AIC(Xt,  standardize=False)
     deviance[i] = clust.deviance(
@@ -435,3 +430,25 @@ if True:
    not, you are in trouble because the (extreme) sample size may be too small.
 
 """
+
+# %%
+
+# Re-fit the model with previously selected epsilon and inspect
+# subfaces and masses
+
+subfaces_select, masses_select = clusteringClef.fit(Xt, kappa_select, False)
+weights_select = masses_select / np.sum(masses_select)
+
+dict_faces_select, dict_weights_select = mlx.list_to_dict(subfaces_select,
+                                                          weights_select)
+
+print("CLEF with selected kappa_min: subfaces")
+pp.pprint(dict_faces_select)
+print("True subfaces")
+pp.pprint(faces_dict_true)
+
+print("final output: weights = normalized masses")
+pp.pprint(dict_weights_select)
+print("True weights")
+pp.pprint(mass_dict_true)
+

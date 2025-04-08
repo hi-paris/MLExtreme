@@ -1,49 +1,50 @@
+# %% [markdown]
 # Author: Anne Sabourin
-# Description: CLEF tutorial
+# Description: DAMEX tutorial
 
 
 # %% [markdown]
 # # Damex tutorial
 
 # %% [markdown]
-"""Implements the DAMEX algorithm described in [1]. 
-The considered unsupervised task is to discover the groups of components of a
-random vector which are comparatively likely to be simultaneously large.
+"""This notebook implements the DAMEX algorithm as described in [1]. The
+unsupervised task considered is the discovery of groups of components
+of a random vector that are comparatively likely to be simultaneously
+large.
 
-The tutorial proposes new methods to choose the tuning parameter
-epsilon in DAMEX and kappa in CLEF, mainly based on AIC and
-cross-validation, and involving a specific pseudo-likelihood for
-(random) subsets of features among {1, ..., d}. Although those methods
-have not been investigated in theory, this notebook provides some
-empirical evidence of the relevance of the proposed selection
-criteria. Alternative stopping criteria for CLEF as propsoed in [3]
-are currently not implemented.
+The tutorial introduces new methods for selecting the tuning parameter
+$\epsilon$ in DAMEX and $\kappa$ in CLEF, primarily based on AIC and
+cross-validation. These methods involve a specific pseudo-likelihood
+for random subsets of features among $\{1, \ldots, d\}$. Although
+these methods lack theoretical investigation, this notebook provides
+empirical evidence supporting the relevance of the proposed selection
+criteria.
 
+**References:**
 [1] Goix, N., Sabourin, A., & Clémençon, S. (2017). Sparse
 representation of multivariate extremes with applications to anomaly
 detection. Journal of Multivariate Analysis, 161, 12-31.
-
 
 """
 
 
 # %%
 # # Set working directory if necessary
-# import os
-# os.getcwd()
+import os
+os.getcwd()
 # #os.chdir("../")
-# %% 
-import sys
+
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 import pprint as pp
 import MLExtreme as mlx
-import pdb
+
 
 # Define the norm function as the infinite norm (other norms are not
-# implemented in DAMEX / CLEF), also defining this norm function is
-# not needed for running clef/damex, only unsed her for visualisation
-# and analysis of the output.
+# implemented in DAMEX / CLEF). This definition is not required for
+# running CLEF/DAMEX and is used here solely for visualization and
+# analysis of the output.
 
 def norm_func(x):
     return np.max(x, axis=1)
@@ -51,8 +52,8 @@ def norm_func(x):
 
 # %% [markdown]
 # ## Ground truth definition:
-# Define or draw a list of subfaces of the unit sphere defining the
-# support of the limit measure.
+# Define or generate a list of subfaces of the unit sphere that
+# represent the support of the limit measure.
 
 # %%
 Plot = False
@@ -62,10 +63,10 @@ num_subfaces = 10  # try 5, 20, 50
 subfaces_list = mlx.gen_subfaces(dimension=dim,
                                  num_subfaces=num_subfaces,
                                  max_size=10,  # try 4, 10, 20
-                                 prevent_inclusions=False,
+                                 prevent_inclusions=True,
                                  seed=seed)
 
-# # uncomment for a simpler example:
+# # Uncomment for a simpler example:
 # subfaces_list = [[0, 1], [1, 2], [2, 3, 4]]
 
 if False:   # change to True to print the list of subfaces
@@ -73,94 +74,98 @@ if False:   # change to True to print the list of subfaces
     pp.pprint(mlx.list_to_dict_size(subfaces_list))
 
 subfaces_matrix = mlx.subfaces_list_to_matrix(subfaces_list, dim)
-#print(subfaces_matrix)
-# dimension, number of mixture components, weights and Dirichlet center locations 
+# print(subfaces_matrix) Dimension, number of mixture components,
+# weights and Dirichlet center locations
 n = int(np.sqrt(dim) * 10**3)
 k = np.shape(subfaces_matrix)[0]
 dim = np.shape(subfaces_matrix)[1]
-# Define admissible dirichlet mixture parameters  (for the limit angular measure
-# of a Pareto - marginally - standardized  heavy-tailed vector, based on
-# the matrix of subfaces. Avoids potentially imbalanced settings accross features
+# Define admissible Dirichlet mixture parameters for the limit angular measure
+# of a marginally Pareto-standardized heavy-tailed vector,
+# based on the matrix of subfaces.
+# This avoids potentially imbalanced settings across features.
 wei = np.ones(k)/k
 Mu, wei = mlx.normalize_param_dirimix(subfaces_matrix, wei)
-# just printing the subfaces and their weight and
-# recording it as a list for further usage
+# Print the subfaces and their weights, and record them as a list for
+# further use.
 faces_true = subfaces_list
 wei_true = wei
 print(f'Mu matrix: \n {np.round(Mu, 3)}')
-print(f'Weights: {np.round(wei, 3)}' )
+print(f'Weights: {np.round(wei, 3)}')
 
 # %% [markdown]
-# ### Hardness settings for the tail problem 
+# ### Difficulty Settings for the Tail Problem
+
+# %% [markdown]
 """
-` lnu ` parameter below is the logarithm of the concentration
-parameter for the Dirichlet mixture.  it is a crucial parameter
-which determines the 'hardness' of the clustering problem.  If any
-exp(lnu[i)) * Mu[i,j] <1 the problem is pathologicallly hard, in the
-sense that the mass on any subface concentrates ON THE BOUNDARY of
-that face On the contrary if all exp(lnu[i)) * Mu[i,j] >> 1, the
-problem is very easy.
+The `lnu` parameter below is the logarithm of the concentration
+parameter for the Dirichlet mixture. It is a crucial parameter that
+determines the difficulty of the clustering problem. If any
+$ \exp(\text{lnu}[i]) \times \text{Mu}[i,j] < 1$, the problem is
+pathologically hard, as the mass on any subface concentrates on the
+boundary of that face. Conversely, if all $\exp(\text{lnu}[i]) \times
+\text{Mu}[i,j] \gg 1$, the problem is very easy.
 
-Play around with 'hardness' parameter below, which should be
+Experiment with the 'difficulty' parameter below, which should be
 strictly positive. Values greater than one correspond to very hard
-problems, values close to zero generate very easy problems. Interesting
-results happen for hardness ~ 0.8
-
+problems, while values close to zero generate very easy
+problems. Interesting results occur for difficulty $\approx 0.8$.
 """
 
 # %%
-hardness = 0.9
+difficulty = 0.8
 
 min_mus = np.zeros(k)
 for j in range(k):
-    min_mus[j] = np.min(Mu[j, Mu[j, :] > 0 ])
-lnu = np.log(1/(hardness**2) * 1/min_mus )
-# check (change to True the condition below to display)
+    min_mus[j] = np.min(Mu[j, Mu[j, :] > 0])
+lnu = np.log(1/(difficulty**2) * 1/min_mus)
+# check (change to True  to display)
 if False:
     print("absolute dirichlet parameters: ")
     print(Mu * np.exp(lnu).reshape(-1, 1))
 
 
 # %% [markdown]
-"""
-Other parameter setting governing the speed of convergence of the
-conditional distribution above a radial threshold towards the limit
-measure.
-"""
+""" Other parameter settings that govern the speed of convergence of
+the conditional distribution above a radial threshold towards the
+limit measure.  """
 
 # %%
-# regular variation index of the data
+# Regular variation index of the data
 alpha = 2
 
-# centers of mass of the Dirichlet mixture in the bulk (vanishing impact above large radial thresholds):
+# Centers of mass of the Dirichlet mixture in the bulk (vanishing
+# impact above large radial thresholds):
 Mu_bulk = np.ones((k, dim))/dim
 
-# `index_weight_noise' below how fast the impact of noise decreases
-# with large radiial thresholds. Namely, the noise 's weight decreases
-# as :  (C/radius)**index_weight_noise
-index_weight_noise = 4 
-
 # %% [markdown]
-# ### Dataset generation and visualisation
+#  `index_weight_noise` below indicates how fast the impact of noise decreases
+# with large radial thresholds. Specifically, the noise's weight decreases as:
+# $(C/\text{radius})^{\text{index\_weight\_noise}}$
 
 # %%
-# generate data 
+index_weight_noise = 4
+
+# %% [markdown]
+# ### Dataset Generation and Visualisation
+
+# %%
+# Generate data
 np.random.seed(42)
 X = mlx.gen_rv_dirimix(alpha, np.round(Mu, 3),  wei, lnu,
                        scale_weight_noise=1, Mu_bulk=Mu_bulk,
                        index_weight_noise=index_weight_noise, size=n)
 
 
-# define rank-transformed data
+# Define rank-transformed data
 Xt = mlx.rank_transform(X)
 
-# generate test data for unsupervised evaluation
+# Generate test data for unsupervised evaluation
 np.random.seed(12345)
 Xtest = mlx.gen_rv_dirimix(alpha, np.round(Mu, 3),  wei, lnu,
                            scale_weight_noise=1, Mu_bulk=Mu_bulk,
                            index_weight_noise=index_weight_noise, size=5*n)
 
-# define rank-trainsformed test data 
+# Define rank-transformed test data
 std_Xtest = mlx.rank_transform(Xtest)
 
 # %%
@@ -172,18 +177,18 @@ jplot = subfaces_list[r_i][1]
 
 if Plot:
     plt.figure(figsize=(10, 10))
-    X_disp = X**(alpha/4)  # for easier viz only 
+    X_disp = X**(alpha/4)  # for easier visualization only
     max_val = np.max(X_disp)
     scatter = plt.scatter(X_disp[:, iplot], X_disp[:, jplot], alpha=0.5)
     plt.xlim(0, max_val)
     plt.ylim(0, max_val)
     plt.xlabel('Feature 1')
     plt.ylabel('Feature d')
-    plt.title('Scatter Plot of the raw  dataset')
+    plt.title('Scatter Plot of the raw dataset')
     plt.show()
 
 # %%
-# rank transformed  generated data with  unit pareto margins
+# Rank transformed  generated data with  unit pareto margins
 # and visualization
 if Plot:
     plt.figure(figsize=(10, 10))
@@ -194,7 +199,7 @@ if Plot:
     plt.ylim(0, max_val)
     plt.xlabel('Feature 1')
     plt.ylabel('Feature d')
-    plt.title('Scatter Plot of the  rank transformed dataset')
+    plt.title('Scatter Plot of the rank transformed dataset')
     plt.show()
 
 # %% [markdown]
@@ -202,8 +207,8 @@ if Plot:
 # ## Radial threshold selection before model fitting
 
 # %%
-# selecting the radial threshold via distance-covariance tests,
-#see supervised tutorials for more details.
+# Select the radial threshold via distance-covariance tests.
+# See the tutorials on classification and regression for more details.
 ntests_thresh = 10
 ratio_ext = np.geomspace(0.05, 0.3, num=ntests_thresh)
 pval, ratio_max = mlx.test_indep_radius_rest(Xt, y=None, ratio_ext=ratio_ext,
@@ -216,36 +221,25 @@ print(f'maximum ratio of extreme samples from rule-of-thumb \
 distance covariance test: {mlx.round_signif(ratio_max, 2)}')
 ratio_extremes = ratio_max * 4/5
 norm_Xt = norm_func(Xt)
-# radial threshold selected with rule-of-thumb radius-versus-rest
+# Radial threshold selected with rule-of-thumb radius-versus-rest
 # independence tests:
-threshold  = np.quantile(norm_Xt, 1 - ratio_extremes)
-# Beware the following is not 'k' in the notations of Goix et al's paper.
-# Instead  it is comprised between k and d * k. It is the number of data points
-# above the radial threshold. 
-number_extremes = np.sum(norm_Xt >= threshold )
+threshold = np.quantile(norm_Xt, 1 - ratio_extremes)
+# Note: The following is not 'k' in the notations of Goix et al.'s
+# paper.  Instead, it is between k and d * k. It is the number of data
+# points above the radial threshold.
+number_extremes = np.sum(norm_Xt >= threshold)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # %% [markdown]
 # ## DAMEX CLUSTERING ALGORITHM (Goix et al.)
 
-# %%
-# Create a Damex clustering instance and fit it with default value epsilon=0.1.
-
-
-include_singletons = False
-
-# option of  considering maximal subfaces (for inclusion) only.
-# to facilitate further comparison with CLEF, set it to true.
-# Indeed in principle, the maximal
-# subfaces issued by Damex and subfaces issued by CLEF are two
-# estimates of the same object, see Chiapino et al.
-use_max_subfaces = True
-min_counts = 0   # np.sqrt(number_extremes)
-# TODO explain
-clustering = mlx.damex(min_counts= min_counts,
+# %% Create a Damex clustering instance and fit it with the default
+# value epsilon = 0.1.
+include_singletons = True
+min_counts = 10
+clustering = mlx.damex(min_counts=min_counts,
                        thresh_train=threshold, thresh_test=threshold,
-                       include_singletons=include_singletons,
-                       use_max_subfaces=use_max_subfaces)
+                       include_singletons=include_singletons)
 damex_subfaces, damex_masses = clustering.fit(X)
 
 # %%
@@ -254,8 +248,8 @@ Xt_disp = Xt**(1/4)
 thresh_disp = clustering.thresh_train**(1/4)
 eps_thresh_disp = (clustering.thresh_train * clustering.epsilon)**(1/4)
 max_val = np.max(Xt_disp)*1.01
-# NB: exponent alpha/4 above is meant to help visualization only. may
-# be removed without altering  the analysis.
+# # Note: The exponent alpha/4 above is meant to aid visualization
+# # only and may be removed without altering the analysis.
 if Plot:
     scatter = plt.scatter(Xt_disp[:, iplot], Xt_disp[:, jplot], alpha=0.5,
                           c='gray')
@@ -264,13 +258,15 @@ if Plot:
     plt.plot([thresh_disp, thresh_disp], [0, thresh_disp], c='blue',
              label='radial threshold')
     plt.plot([0, thresh_disp], [thresh_disp, thresh_disp], c='blue')
-    plt.plot([thresh_disp, max_val], [eps_thresh_disp, eps_thresh_disp], c='red',
+    plt.plot([thresh_disp, max_val], [eps_thresh_disp, eps_thresh_disp],
+             c='red',
              label='tolerance distance-to-subface threshold')
-    plt.plot([eps_thresh_disp, eps_thresh_disp], [thresh_disp, max_val], c='red')
+    plt.plot([eps_thresh_disp, eps_thresh_disp], [thresh_disp, max_val],
+             c='red')
     plt.xlabel('Feature 1')
     plt.ylabel('Feature d')
-    plt.title('Scatter Plot of the rank_transformed  dataset and \
-    selected thresholds')
+    plt.title('Scatter Plot of the rank_transformed dataset and \
+selected thresholds')
     plt.legend()
     plt.show()
 
@@ -294,38 +290,40 @@ if True:
     print(mass_dict_true)
 
 # %% [markdown]
-# ## Unsupervised scoring.
-""" This material presents novel concepts, not yet supported by formal
+# ## Unsupervised scoring
+
+# %% [markdown]
+"""
+This material presents novel concepts, not yet supported by formal
 published theory, but intuitive and practical. It aids in evaluating
-goodness-of-fit, comparing different model variants (e.g., `min_counts
-> 0`, `use_max_subfaces`), and, most importantly, selecting the
+goodness-of-fit, and most importantly, selecting the
 parameter `epsilon` (or `kappa_min` in CLEF). The ideas are related to
 Jorgensen's *Theory of Dispersion Models*.
 
 We introduce an unsupervised performance metric termed *Total
 Deviance*, inspired by Jorgensen's work. This metric relies on a unit
-deviance function \( d(\text{subface}_1, \text{subface}_2) \), defined
+deviance function $ d(\text{subface}_1, \text{subface}_2) $, defined
 as in Chiapino et al. as the ratio of the symmetric difference between
 the index sets of two subfaces to the cardinality of the union of
 these index sets.
 
-Given a unit deviance \( d \), the total deviance of an estimated pair
+Given a unit deviance $ d $, the total deviance of an estimated pair
 (list of subfaces, list of masses) from Damex or CLEF, with respect to
 an extreme dataset, is computed as follows:
 
-1. Each extreme point \( X_i \) is transformed into a binary vector
-using the same "mask" as in Damex/CLEF. For Damex, \( X_{i,j} = 1 \)
-if \( ||X_i|| > \text{threshold} \) and \( X_{i,j} > \epsilon \times
-\text{threshold} \); otherwise, \( X_{i,j} = 0 \). In CLEF, this
-condition applies with \( \epsilon = 1 \).
+1. Each extreme point $ X_i $ is transformed into a binary vector
+using the same "mask" as in Damex/CLEF. For Damex, $ X_{i,j} = 1 $
+if $ ||X_i|| > \text{threshold} $ and $ X_{i,j} > \epsilon \times
+\text{threshold} $; otherwise, $ X_{i,j} = 0 $. In CLEF, this
+condition applies with $ \epsilon = 1 $.
 
 2. Each binary-transformed extreme point is identified with a subface
 by considering its non-zero entries as the indices defining the
-subface. This allows the definition of \( d(\text{subface}, X_i) \).
+subface. This allows the definition of $ d(\text{subface}, X_i) $.
 
-3. If \( (m_j, j \leq J) \) are the estimated subface masses from
-Damex, their weights are defined as \( p_j = m_j / \text{total\_mass}
-\), where `total_mass` is the total limit measure mass on the
+3. If $ (m_j, j \leq J) $ are the estimated subface masses from
+Damex, their weights are defined as $ p_j = m_j / \text{total\_mass}
+$, where `total_mass` is the total limit measure mass on the
 complementary set of the unit ball.
 
 The total (log-)deviance is then defined as:
@@ -347,10 +345,6 @@ on a test set) is implemented. Both the AIC and cross-validation
 estimator aim to estimate the expected Deviance of the trained model
 on a test set.
 
-Furthermore, since we can compute the deviance with respect to the
-true subfaces and masses, we can perform this calculation in both
-directions.
-
 Additionally, since we are working with simulated data, the
 implementations of Damex and CLEF include an option to compute the
 deviance of the estimated parameters (list of subfaces and list of
@@ -360,7 +354,7 @@ weights), and vice versa.
 """
 
 # %%
-# Deviance to true parameters: 
+# Deviance from estimated to true parameters:
 deviance_est_true, deviance_true_est = clustering.deviance_to_true(
     faces_true, wei_true)
 
@@ -377,16 +371,20 @@ print("Deviances between faces, masses: \
 a) estimated to true b) true to estimated")
 print(deviance_est_true, deviance_true_est)
 
-#%% [markdown]
+# %% [markdown]
+
+""" For this sample size, AIC and CV appear to be equally reliable for
+estimating the expected deviance on a test set (or the deviance on a
+sufficiently large test set as here). Additionally, the deviance
+between the true parameters (faces and masses) and the estimated ones
+is, in principle, similar to the test set estimate of the total
+deviance, which is also observed here.
+
 """
-For this sample size, AIC appears to be more precise than cross-validation. However, this should not be taken as a general rule until further theoretical understanding of this pseudo-AIC criterion is achieved. Additionally, the deviance between the true parameters (faces and masses) and the estimated ones is, in principle, similar to the test set estimate of the total deviance, which is also observed here.
-"""
-# TODO CHECK: it is not clear why in practive the (subfaces-mass) deviance is even closer to the CV estimate. this may be just random. 
 
 
-# %%[markdown]# 
+# %% [markdown]
 # ## Choosing Epsilon based on AIC / CV
-# here and below we propose choosing epsilon in DAMEX using the AIC criterion. A CV-based selection rule is also implemented (but here we retain the AIC slection rule in the end)
 
 # %%
 # select epsilon with AIC and update model:
@@ -405,15 +403,14 @@ eps_select_CV, _, _ = clustering.select_epsilon_CV(eps_vect, X, plot=True,
 print('epsilon parameter selection (CV):')
 print(mlx.round_signif(eps_select_CV, 2))
 
-# check that epsilon stored in object is still default one
+# Check that epsilon stored in object is still the default one
 clustering.epsilon
 
 # %% [markdown]
-# ## wrapping up: comparison of all metrics:
+# ## Wrapping up: Comparison of All Metrics:
 
 # %%
-# agreement with other metrics: 
-# recommended choice of epsilon here: by CV
+# # Agreement with other metrics: recommended choice of epsilon here: by CV
 eps_select = eps_select_CV
 i_select = np.where(eps_select == eps_vect)[0][0]
 aic_vals = np.zeros(neps)
@@ -427,12 +424,11 @@ for i in range(neps):
     clust = mlx.damex(epsilon=eps_vect[i], min_counts=min_counts,
                       thresh_train=threshold,
                       thresh_test=threshold,
-                      include_singletons=include_singletons,
-                      use_max_subfaces=use_max_subfaces)
+                      include_singletons=include_singletons)
     faces, masses = clust.fit(Xt, standardize=False)
     aic_vals[i] = clust.get_AIC(Xt, standardize=False)
     deviance[i] = clust.deviance(std_Xtest, standardize=False)
-    deviance_train[i] = clust.deviance(Xt, standardize=False)    
+    deviance_train[i] = clust.deviance(Xt, standardize=False)
     deviance_cv_scores = clust.deviance_CV(Xt, standardize=False,
                                            random_state=13+137*i, cv=5)
     deviance_cv[i] = np.mean(deviance_cv_scores)
@@ -461,27 +457,46 @@ if True:
 """
 **Conclusion:** All goes as planned:
 
-    - deviance on testing set and AIC are very close or even
-     indistinguishable as soon as epsilon is not too small, reflecting
-     the fact that AIC is a consistent estimate of the deviance on a
-     test set.
+- Deviance on the testing set and AIC are very close or even
+  indistinguishable as soon as epsilon is not too small, reflecting
+  the fact that AIC is meant to estimate  the deviance on a test
+  set.
 
-    - deviance on train set and AIC are close bevasue the number of
-      'parameters' of the mode (i.e. number of faces) is small
-      compared with the sample size (here, the number of extremes)
+- Deviance on the training set and AIC are close because the number of
+  'parameters' of the model (i.e., number of faces) is small compared
+  with the sample size (here, the number of extremes).
 
-    - deviance on train is close, but less than, deviance on test,
-      reflecting slight overfitting.
+- Deviance on the training set is close to, but less than, the
+  deviance on the test set, reflecting slight overfitting.
 
-    - deviance on test is a reasonable approximation of the deviance
-      of the estimated parameter from the true model (not the other
-      way around, think about it)
+- Deviance on the test set is a reasonable approximation of the
+  deviance of the estimated parameter from the true model (not the
+  other way around).
 
-- CV deviance is different from test deviance but follows a similar pattern.
+- CV deviance is different from the test deviance but follows a
+  similar pattern.
 
-** Recommendation** to choose epsilon, use `select_epsilon_AIC ` and
-   `select_epsilon_CV'. The results should be similar. If they are
-   not, you are in trouble because the (extreme) sample size may be too small.
+**Take-home message:** To choose epsilon, use `select_epsilon_AIC` and
+  `select_epsilon_CV`. The results should be similar. If they are not,
+  you may be in trouble because the (extreme) sample size may be too
+  small.
 
 """
 
+# %% Re-fit the model with previously selected epsilon and inspect
+# subfaces and masses
+subfaces_select, masses_select = clustering.fit(Xt, eps_select, False)
+weights_select = masses_select / np.sum(masses_select)
+
+dict_faces_select, dict_weights_select = mlx.list_to_dict(subfaces_select,
+                                                          weights_select)
+
+print("Damex with selected epsilon: subfaces")
+pp.pprint(dict_faces_select)
+print("True subfaces")
+pp.pprint(faces_dict_true)
+
+print("final output: weights = normalized masses")
+pp.pprint(dict_weights_select)
+print("True weights")
+pp.pprint(mass_dict_true)

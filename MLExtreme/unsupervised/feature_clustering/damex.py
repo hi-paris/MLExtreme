@@ -19,7 +19,7 @@ class damex:
 
     def __init__(self, epsilon=0.1, min_counts=0, thresh_train=None,
                  thresh_test=None,
-                 include_singletons=False,  use_max_subfaces=False,
+                 include_singletons=False,  
                  rate=10):
         """
         Initialize the DAMEX model with specified parameters.
@@ -36,8 +36,7 @@ class damex:
 
         - include_singletons (bool): Whether to include singletons in
               training and testing.
-        - use_max_subfaces (Bool): whether to consider only maximal faces
-        for inclusion when computing deviance scores.
+
         - rate (float, >0): rate parameter for the dispersion model
             on subfaces.
         """
@@ -46,12 +45,9 @@ class damex:
         self.thresh_train = thresh_train
         self.thresh_test = thresh_test
         self.include_singletons = include_singletons
-        self.use_max_subfaces = use_max_subfaces
         self.rate = rate
         self.subfaces = None  # Identified subfaces
         self.masses = None  # Masses associated with subfaces
-        self.maximal_subfaces = None  # Maximal subfaces
-        self.maximal_masses = None  # Masses of maximal subfaces
         self.total_mass = None  # Total mass of extremes
         self.number_extremes = None  # Number of extreme points
         self.dimension = None  # Dimensionality of the data
@@ -76,8 +72,7 @@ class damex:
         Returns:
         ---------
 
-        - Subfaces (list): Identified subfaces (or maximal subfaces in case
-            self.use_max_subfaces is True).
+        - Subfaces (list): Identified subfaces. 
 
         - Masses (np.ndarray): Masses associated with subfaces.
         """
@@ -99,8 +94,7 @@ class damex:
 
         # Update total mass accordingly
         self.number_extremes = np.sum(norm_Xt > self.thresh_train)
-        self.total_mass = self.thresh_train * \
-            self.number_extremes / len(norm_Xt)
+        self.total_mass = self.thresh_train * self.number_extremes / len(norm_Xt)
 
         # Fit the model
         Subfaces, Masses = ut.damex_fit(
@@ -110,49 +104,7 @@ class damex:
         # Update instance's attributes
         self.subfaces = Subfaces
         self.masses = Masses
-
-        # compute maximal subfaces and update model
-        _, _ = self.construct_maximal_subfaces(Xt, standardize=False)
-
-        if self.use_max_subfaces:
-            return self.maximal_subfaces, self.maximal_masses
-        else:
-            return Subfaces, Masses
-
-    def construct_maximal_subfaces(self, X, standardize=True):
-        """
-        Construct maximal subfaces from the fitted model.
-
-        Parameters:
-        ------------
-
-        - X (np.ndarray): Input data.
-
-        - standardize (bool): Whether to standardize the data.
-
-        Returns:
-        ----------
-
-        - dict_max_faces (dict): Dictionary of maximal subfaces.
-
-        - dict_max_masses (dict): Dictionary of masses associated with maximal
-          subfaces.
-        """
-        if self.subfaces is None:
-            raise RuntimeError("The model has not been fitted yet. Call 'fit' "
-                               "with appropriate arguments before using this "
-                               "method.")
-
-        faces_dict, _ = ut.list_to_dict(self.subfaces, self.masses)
-        self.maximal_subfaces = ut.find_maximal_faces(faces_dict, lst=True)
-        self.maximal_masses = ut.estim_subfaces_mass(self.maximal_subfaces,
-                                                     X, self.thresh_train,
-                                                     self.epsilon,
-                                                     standardize=standardize)
-
-        dict_max_faces, dict_max_masses = ut.list_to_dict(
-            self.maximal_subfaces, (self.maximal_masses).tolist())
-        return dict_max_faces, dict_max_masses
+        return Subfaces, Masses
 
     def deviance(self, Xtest, thresh_test=None, standardize=False):
         """Calculate the deviance of the model on test data.
@@ -164,7 +116,7 @@ class damex:
 
         - thresh_test(float): Threshold for identifying extremes in
             the test set.  If None, the instance's attribute will be
-            used instead. If the lmatter is also None, thresh_test
+            used instead. If the latter is also None, thresh_test
             will be set to the same value as thresh_train.
 
         - standardize (bool): Whether to standardize the data.
@@ -189,15 +141,12 @@ class damex:
         if self.thresh_test is None:
             self.thresh_test = self.thresh_train
 
-        Subfaces = self.maximal_subfaces if self.use_max_subfaces \
-            else self.subfaces
-        Masses = self.maximal_masses if self.use_max_subfaces \
-            else self.masses
+        Subfaces = self.subfaces 
+        Masses = self.masses  
 
-        negative_pseudo_lkl = ut.setDistance_subfaces_data(
-            Subfaces, self.thresh_test, Xt,
-            self.include_singletons, self.epsilon, Masses,
-            self.total_mass, dispersion_model=True, rate=self.rate)
+        negative_pseudo_lkl = ut.total_deviance(
+            Subfaces, Masses, Xt, self.thresh_test,
+            self.include_singletons, self.epsilon, rate=self.rate)
 
         return 2 * negative_pseudo_lkl
 
@@ -220,8 +169,7 @@ class damex:
         if self.masses is None:
             raise RuntimeError("Fit the model before computing the AIC")
 
-        Masses = self.maximal_masses if self.use_max_subfaces \
-            else self.masses
+        Masses = self.masses
         intern_deviance = self.deviance(Xtrain, self.thresh_train, standardize)
         return intern_deviance + 2 * len(Masses) / self.number_extremes
 
@@ -337,7 +285,7 @@ class damex:
 
         cv_neglkl_scores = ut.ftclust_cross_validate(
             Xt, standardize=False, algo='damex', tolerance=self.epsilon,
-            min_counts=self.min_counts, use_max_subfaces=self.use_max_subfaces,
+            min_counts=self.min_counts, use_max_subfaces=False,
             thresh_train=self.thresh_train, thresh_test=self.thresh_test,
             include_singletons_train=self.include_singletons,
             include_singletons_test=self.include_singletons,
@@ -399,6 +347,8 @@ class damex:
         deviance_tol_cv = cv_deviance_vect[i_cv]
 
         if plot:
+            print(f'DAMEX: selected epsilon with CV criterion '
+                  f'{round_signif(tol_cv, 2)}')
             plt.scatter(grid, cv_deviance_vect, c='gray', label='CV deviance')
             plt.plot([tol_cv, tol_cv], [0, deviance_tol_cv], c='red',
                      label='selected value')
@@ -437,15 +387,8 @@ class damex:
         """
         if self.subfaces is None:
             raise RuntimeError("DAMEX has not been fitted yet")
-
-        if self.use_max_subfaces:
-            if self.maximal_subfaces is None:
-                raise RuntimeError("Construct maximal subfaces first")
-            Subfaces = self.maximal_subfaces
-            Masses = self.maximal_masses
-        else:
-            Subfaces = self.subfaces
-            Masses = self.masses
+        Subfaces = self.subfaces
+        Masses = self.masses
 
         if isinstance(Masses, list):
             Masses = np.array(Masses)
@@ -464,15 +407,17 @@ class damex:
                                            axis=1) >= 2)[0]
             Subfaces_matrix = Subfaces_matrix[id_keep_estim]
             Masses = Masses[id_keep_estim]
+            Masses = Masses / np.sum(Masses) if np.sum(Masses) > 0 else Masses
             Subfaces_true_matrix = Subfaces_true_matrix[id_keep_true]
             weights_true = weights_true[id_keep_true]
-            weights_true = weights_true / np.sum(weights_true)
+            weights_true = weights_true / np.sum(weights_true) \
+                if np.sum(weights_true) > 0 else weights_true
 
-        est_to_truth = 2 * ut.setDistance_error_m2m(
-            Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true, 1,
-            True, self.rate)
-        truth_to_est = 2 * ut.setDistance_error_m2m(
+        est_to_truth = 2 * ut.total_deviance_binary_matrices(
+            Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true,
+            self.rate)
+        truth_to_est = 2 * ut.total_deviance_binary_matrices(
             Subfaces_true_matrix, weights_true, Subfaces_matrix, Masses,
-            self.total_mass, True, self.rate)
+            self.rate)
 
         return est_to_truth, truth_to_est

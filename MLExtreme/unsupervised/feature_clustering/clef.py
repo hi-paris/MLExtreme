@@ -19,8 +19,8 @@ from ...utils.EVT_basics import rank_transform, round_signif
 
 class clef:
     def __init__(self, kappa_min=0.1, thresh_train=None,
-                 thresh_test=None, include_singletons=False,
-                  rate=10):
+                 thresh_test=None,
+                 rate=10):
         """Initialize the DAMEX model with specified parameters.
 
         Parameters:
@@ -35,21 +35,10 @@ class clef:
 
         - thresh_test (float): Threshold for test data.
 
-        - include_singletons (bool): Whether to include singletons in
-          training and testing. Warning: setting this parameter to
-          True induces unstable behaviour for sparse settings where
-          many singleton features are asymptotically independent (in
-          the EVA sense) from other features. Indeed CLEF is not
-          designed to recover singletons. It is recommended to leave
-          the parameter to the default value (False) except for
-          experimental comparison with DAMEX, which design indeed
-          covers the case of singleton features.
-
-        """
+         """
         self.kappa_min = kappa_min
         self.thresh_train = thresh_train
         self.thresh_test = thresh_test
-        self.include_singletons = include_singletons
         self.rate = rate
         self.subfaces = None  # Identified subfaces
         self.masses = None  # Masses associated with subfaces
@@ -105,7 +94,7 @@ class clef:
         # Fit the model
         Subfaces = ut.clef_fit(
             Xt, self.thresh_train, self.kappa_min,
-            standardize=False, include_singletons=self.include_singletons)
+            standardize=False, include_singletons=False)
         Masses = ut.estim_subfaces_mass(
             Subfaces, Xt, self.thresh_train, epsilon=None,
             standardize=False)
@@ -153,10 +142,9 @@ class clef:
         Subfaces = self.subfaces
         Masses = self.masses
 
-        negative_pseudo_lkl = ut.setDistance_subfaces_data(
-            Subfaces, self.thresh_test, Xt,
-            self.include_singletons, None, Masses,
-            self.total_mass, dispersion_model=True, rate=self.rate)
+        negative_pseudo_lkl = ut.total_deviance(
+            Subfaces, Masses, Xt,  self.thresh_test,
+            False, None, rate=self.rate)
 
         return 2 * negative_pseudo_lkl
 
@@ -238,7 +226,7 @@ class clef:
             plt.ylabel('AIC')
             plt.title('CLEF: AIC versus kappa_min')
             plt.scatter(grid, vect_aic, c='gray', label='AIC')
-            plt.plot([kapp_select_aic, kapp_select_aic], [0, max(vect_aic)],
+            plt.plot([kapp_select_aic, kapp_select_aic], [0, aic_opt],
                      c='red')
             plt.grid(True)
             plt.show()
@@ -294,8 +282,8 @@ class clef:
             Xt, standardize=False, algo='clef', tolerance=self.kappa_min,
             min_counts=None, use_max_subfaces=None,
             thresh_train=self.thresh_train, thresh_test=self.thresh_test,
-            include_singletons_train=self.include_singletons,
-            include_singletons_test=self.include_singletons,
+            include_singletons_train=False,
+            include_singletons_test=False,
             rate=self.rate, cv=cv, random_state=random_state)
 
         return 2 * cv_neglkl_scores
@@ -412,21 +400,23 @@ class clef:
         if isinstance(weights_true, list):
             weights_true = np.array(weights_true)
 
-        if not self.include_singletons:
-            id_keep_estim = np.where(np.sum(Subfaces_matrix, axis=1) >= 2)[0]
-            id_keep_true = np.where(np.sum(Subfaces_true_matrix,
-                                           axis=1) >= 2)[0]
-            Subfaces_matrix = Subfaces_matrix[id_keep_estim]
-            Masses = Masses[id_keep_estim]
-            Subfaces_true_matrix = Subfaces_true_matrix[id_keep_true]
-            weights_true = weights_true[id_keep_true]
-            weights_true = weights_true / np.sum(weights_true)
+        #if not self.include_singletons:
+        id_keep_estim = np.where(np.sum(Subfaces_matrix, axis=1) >= 2)[0]
+        id_keep_true = np.where(np.sum(Subfaces_true_matrix,
+                                       axis=1) >= 2)[0]
+        Subfaces_matrix = Subfaces_matrix[id_keep_estim]
+        Masses = Masses[id_keep_estim]
+        Masses = Masses / np.sum(Masses) if np.sum(Masses) > 0 else Masses
+        Subfaces_true_matrix = Subfaces_true_matrix[id_keep_true]
+        weights_true = weights_true[id_keep_true]
+        weights_true = weights_true / np.sum(weights_true) \
+            if np.sum(weights_true) > 0 else weights_true
 
-        est_to_truth = 2 * ut.setDistance_error_m2m(
-            Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true, 1,
-            True, self.rate)
-        truth_to_est = 2 * ut.setDistance_error_m2m(
+        est_to_truth = 2 * ut.total_deviance_binary_matrices(
+            Subfaces_matrix, Masses, Subfaces_true_matrix, weights_true, 
+            self.rate)
+        truth_to_est = 2 * ut.total_deviance_binary_matrices(
             Subfaces_true_matrix, weights_true, Subfaces_matrix,
-            Masses, self.total_mass, True, self.rate)
+            Masses,  self.rate)
 
         return est_to_truth, truth_to_est

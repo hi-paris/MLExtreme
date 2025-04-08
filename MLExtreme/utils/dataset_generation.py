@@ -58,7 +58,7 @@ def gen_rv_dirimix(alpha=1, Mu=np.array([[0.5,  0.5]]),
         Mu_bulk = Mu_bulk_0 / r_0.reshape(-1, 1)
 
     if wei_bulk is None:
-        wei_bulk = wei #np.ones(k_comp)/k_comp
+        wei_bulk = wei  # np.ones(k_comp)/k_comp
 
     if lnu_bulk is None:
         lnu_bulk = lnu[::-1]

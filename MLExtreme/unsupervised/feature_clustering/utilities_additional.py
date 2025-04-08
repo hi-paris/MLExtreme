@@ -2,11 +2,12 @@ from __future__ import division
 #import random as rd
 import itertools as it
 import numpy as np
+import matplotlib.pyplot as plt
 # import networkx as nx
 from . import utilities as ut
 from . import clef
 from . import ftclust_analysis as fca # setDistance_subface_to_matrix
-
+from ...utils.EVT_basics import rank_transform, round_signif
 
 
 
@@ -503,6 +504,25 @@ def r_partial_derivative_centered(matrix_k, matrix_kp, matrix_km, subface, k):
 # ### Displaced from clef.py
 # ########################################
 
+# def list_subfaces_to_bin_matrix(subfaces, dimension):
+#     """
+#     Converts a list of subface indices into a binary matrix.
+
+#     Args:
+#     - subfaces (list): List of subfaces.
+#     - dimension (int): Dimensionality of the ambient space.
+
+#     Returns:
+#     - np.ndarray: Binary matrix representation of subfaces.
+#     """
+#     num_subfaces = len(subfaces)
+#     vector_subfaces = np.zeros((num_subfaces, dimension))
+
+#     for subface_index, subface in enumerate(subfaces):
+#         vector_subfaces[subface_index, subface] = 1.0
+
+#     return vector_subfaces
+ 
 
 def khi(binary_data, face):
     face_vect_tmp = binary_data[:, face]
@@ -557,3 +577,170 @@ def freq_0(x_bin_k, k, f_min):
     return clef.find_maximal_faces(faces_dict)
 
 
+###########################
+# Discarded functions
+def entropy(masses, total_mass):
+    """
+    Calculates the entropy of a distribution defined by `masses`.
+
+    Parameters:
+    - masses (list or np.ndarray): List of masses.
+    - total_mass (float): Total mass of the distribution.
+
+    Returns:
+    - float: Entropy value.
+    """
+    k = len(masses)
+    if k <= 1:
+        return np.inf
+    if isinstance(masses, list):
+        masses = np.array(masses)
+    if total_mass is None:
+        total_mass = np.sum(masses)
+
+    distrib = masses[masses > 0] / total_mass
+    log_distrib = np.log(distrib)
+    neg_product = - distrib * log_distrib
+    return np.sum(neg_product)  # / np.log(k)
+
+
+def AIC_masses(masses, number_extremes, total_mass):
+    """
+    Calculates the Akaike Information Criterion (AIC) for a given
+    distribution of masses.
+
+    Parameters:
+    - masses (list or np.ndarray): List of masses.
+    - number_extremes (int): Number of extreme points.
+    - total_mass (float): Total mass of the distribution.
+
+    Returns:
+    - float: AIC value.
+    """
+    k = len(masses)
+    if k <= 1:
+        return 0
+    normalized_negative_log_likelihood = entropy(masses, total_mass=total_mass)
+    return 2 * (normalized_negative_log_likelihood + k/number_extremes)
+
+def clef_select_kappa_AIC(vect_kappa, X, radial_threshold,
+                          # include_singletons=True,
+                          standardize,
+                          unstable_kappa_max=0.05, plot=False):
+    """
+    Selects the optimal kappa value based on AIC.
+
+    Parameters:
+    - vect_kappa (list): List of kappa values to test.
+    - X (np.ndarray): Input data.
+    - radial_threshold (float): Radius threshold for identifying extreme
+      samples.
+    - standardize (bool): Whether to standardize the data.
+    - unstable_kappa_max (float): Maximum kappa value for unstable solutions.
+    - plot (bool): Whether to plot the AIC values.
+
+    Returns:
+    - float: Selected kappa value.
+    """
+    if standardize:
+        radii = np.max(rank_transform(X), axis=1)
+    else:
+        radii = np.max(X, axis=1)
+    num_extremes = np.sum(radii >= radial_threshold)
+    total_mass = radial_threshold * num_extremes / X.shape[0]
+    ntests = len(vect_kappa)
+    vect_aic = np.zeros(ntests)
+    counter = 0
+    for kappa in vect_kappa:
+        clef_faces = ut.clef_fit(X, radial_threshold, kappa,
+                                 standardize=standardize,
+                                 include_singletons=False)
+        list_of_masses = ut.clef_estim_subfaces_mass(clef_faces, X,
+                                                     radial_threshold,
+                                                     standardize=standardize)
+        vect_aic[counter] = AIC_masses(list_of_masses, num_extremes,
+                                       total_mass)
+        # selection based on AIC
+        # vect_aic below is
+        # proportional to : - log-likelihood(categorical model) + k where k
+        # is the number of categories, ie the number of subfaces.
+        # vect_aic = vect_entropy + vect_number_faces / num_extremes
+        counter += 1
+
+    i_maxerr = np.argmax(vect_aic[vect_kappa < unstable_kappa_max])
+    kappa_maxerr = vect_kappa[i_maxerr]
+    i_mask = vect_kappa <= kappa_maxerr
+    i_minAIC = np.argmin(vect_aic + (1e+23) * i_mask)
+    kappa_select_aic = vect_kappa[i_minAIC]
+
+    if plot:
+        plt.figure(figsize=(10, 5))
+        plt.xlabel('kappa_min')
+        plt.ylabel('AIC')
+        plt.title('AIC versus kappa_min')
+        plt.scatter(vect_kappa, vect_aic, c='gray', label='AIC')
+        plt.plot([kappa_select_aic, kappa_select_aic],
+                 [0, max(vect_aic)], c='red')
+        plt.grid(True)
+        plt.show()
+
+    print(f'CLEF: selected kappa_min with AIC method: \
+        {round_signif(kappa_select_aic, 2)}')
+    return kappa_select_aic
+
+# def setDistance_subface_to_list(subface, subfaces_list, normalize=True):
+#     """
+#     Computes the pseudo-Subface distance between one subface and a
+#     matrix of subfaces.
+
+#     Args:
+#     - subface (np.ndarray): Single subface vector.
+#     - subfaces_list (list): list of subface vectors
+
+#     Returns:
+#     - np.ndarray: Array of distances.
+#     """
+#     subfaces_matrix = ut.subfaces_list_to_matrix(subfaces_list)
+#     return setDistance_subface_to_matrix(subface, subfaces_matrix, normalize)
+
+# def setDistance_error_l2l(subfaces_list, masses, subfaces_reference_list,
+#                           reference_masses, total_reference_mass,
+#                           dimension,
+#                           dispersion_model, rate
+#                           ):
+#     """
+#     Computes the average minimum set distance between
+#      all entries of subfaces_list and the reference list
+#     subfaces_reference_list.
+
+#     The results is a weighted average of the minimum set distances,
+#     weighted by the corresponding normalized `mass` entry in the
+#     considered subfaces in `subfaces_list'.
+
+#     The lower, the better.
+
+#     Parameters:
+#     - subfaces_list (list): List of subfaces.
+#     - masses (list or np.ndarray): Masses associated with subfaces.
+#     - subfaces_reference_list (list): Reference list of subfaces.
+#     - reference_masses (list or np.ndarray): Masses associated with reference
+#       subfaces.
+#     - total_reference_mass (float): Total mass of reference subfaces.
+#     - dimension (int): Dimensionality of the space.
+#     - dispersion_model (bool): Whether to use a dispersion model.
+#     - rate (float, >0): Rate parameter for deviance calculation.
+
+#     Returns:
+#     - float: Average minimum set distance.
+#     """
+#     if len(subfaces_list) == 0:
+#         return 0
+#     if len(subfaces_reference_list) == 0:
+#         return float('inf')
+#     subfaces_matrix = subfaces_list_to_matrix(subfaces_list, dimension)
+#     subfaces_reference_matrix = subfaces_list_to_matrix(
+#         subfaces_reference_list, dimension)
+#     return total_deviance_binary_matrices(subfaces_matrix, masses,
+#                                  subfaces_reference_matrix,
+#                                  reference_masses, total_reference_mass,
+#                                  dispersion_model, rate)
