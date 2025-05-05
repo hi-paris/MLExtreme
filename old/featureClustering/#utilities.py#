@@ -860,7 +860,7 @@ def total_deviance(subfaces_list, masses, std_data, threshold,
 def list_to_dict(faces_list, mass_list):
     """
     Converts a list of faces into a dictionary where keys are face
-    sizes and values are lists of faces, orderted by sizes.
+    sizes and values are lists of faces, ordered by sizes.
 
     Useful for inspection of large lists of subfaces.
 
