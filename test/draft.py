@@ -169,3 +169,10 @@ faces0, counts0 = mlx.damex_0(true_bin_array)
 print("True faces:")
 print(true_bin_array)
 pp.pprint(faces0)
+
+x_raw = np.array([[10, 20], [30, 40], [50, 60]])
+mlx.rank_transform(x_raw)
+
+x_train = np.array([[1, 2], [3, 4], [5, 6]])
+x_test = np.array([[2, 3], [4, 5]])
+mlx.rank_transform_test(x_train, x_test)

@@ -6,6 +6,7 @@ Submodules
 
 utils.dataset\_generation module
 --------------------------------
+A toolkit for generating datasets that are regularly varying  (unsupervised setting) or with a regularly varying covariate ocmponent (supervised setting) 
 
 .. automodule:: utils.dataset_generation
    :members:

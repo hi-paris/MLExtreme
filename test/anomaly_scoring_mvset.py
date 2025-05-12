@@ -1,27 +1,55 @@
+# file: anomaly_scoring_mvset.py
 # Author: Anne Sabourin
 # Description: DAMEX/CLEF tutorial: comparison
 # Date: May 2025
 
+
+# %% [markdown]
+# # Tutorial notebook for anomaly scoring among extremes  with angular mass-volume sets
+
+# %% [markdown]
+"""
+Implements and illustrates the methodology and theory developed in
+
+    * TODO
+"""
+
+
+# %% [markdown]
+# ## Preliminary manipulations <a class="anchor" id="Preliminary"></a>
+
+
+# %%
+# Set working directory if necessary
 import os
 os.getcwd()
-#os.chdir("../")
+# os.chdir("../")
 
+# %% [markdown]
+# Imports
+
+# %%
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import griddata
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
-
 import MLExtreme as mlx
 
 
+# %% [markdown]
+# ## Data generation <a id="Data_generation"></a>
+# Regular Variation model with Dirichlet mixture model as a limit
+# angular distribution
+
+# %%
 # Example RV-dirimix  data generation p = 2
 n = 10000  # Number of samples
 p = 2  # Ambient dimension (2D in this case)
 k = 3  # Number of components in the Dirichlet mixture
-alpha = 2# Shape parameter of the Pareto distribution
+alpha = 2 # Shape parameter of the radial Pareto distribution
 
-# Mixture means (Mu), log scale (lnu), and weights (wei)
+# Dirichlet Mixture with means (Mu), log scale (lnu), and weights (wei)
 Mu = np.array([ [0.5, 0.5]])  # k* p matrix of means
 lnu = np.log([50] )  # log(10) for both components
 wei = np.array([1])  # weights for the mixture components
@@ -51,12 +79,12 @@ l1 = np.sum(X_test, axis=1)
 linf = np.max(X_test, axis=1)
 X_test = ((X_test) * l1.reshape(-1, 1) / linf.reshape(-1, 1))
 
+# Rank transform the training set and also the test set, where the
+# transformation is learnt using the training set only
 Xt = mlx.rank_transform(X)
 Xt_test = mlx.rank_transform_test(X, X_test)
 
-
-
-## Plotting the dataset (2D plot), rescale for easier visualization
+# Plotting the dataset (2D plot), rescale for easier visualization
 X_disp = Xt**(alpha/4)
 idex = np.max(Xt, axis=1) > 10**(1/alpha)
 fig, axs = plt.subplots(1, 2, figsize=(8, 4)) 
@@ -77,8 +105,13 @@ axs[1].set_title('2D Scatter Plot of Extreme Generated Points')
 plt.show()
 
 
-J=4
+# %% [markdown]
+# ## train the angular mass-volume set model.
+# NB: J is the number of histogram cells per dimension.
+# J should be chosen rather small especially when d>2 because the total number of cells is  d * J**(d-1)
 
+# %%
+J=4
 radii = np.max(Xt, axis=1)
 thresh_train = np.quantile(radii, q=1 - 1/100)
 ad_mv = mlx.Xmvset(J=J, thresh_train=thresh_train, thresh_predict=thresh_train)

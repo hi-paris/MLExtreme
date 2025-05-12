@@ -11,8 +11,8 @@ sys.path.insert(0, os.path.abspath('../MLExtreme'))
 
 
 project = 'Test'
-copyright = '2025, PA'
-author = 'PA'
+copyright = '2025, PA, AS'
+author = 'PA, AS'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

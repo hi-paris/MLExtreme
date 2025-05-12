@@ -19,7 +19,7 @@ from .EVT_basics import (
     gen_dirimix,
     plot_pdf_dirimix_2D,
     plot_pdf_dirimix_3D,
-    gen_PositiveStable,
+    # gen_PositiveStable,
     gen_multilog,
     transform_target_lin,
     inv_transform_target_lin,

@@ -1,3 +1,9 @@
+# File: supervised_classif.py
+# Author: Anne Sabourin
+# Description: Classification on extreme covariates: tutorial
+# Date: May 2025
+
+
 # %% [markdown]
 # # Tutorial notebook for classification on extreme covariates
 
@@ -76,9 +82,9 @@ In this toy example, each class (conditioned on $ y = 1 $ or $  y = 0 $) follows
 # data generation
 Dim = 2
 n = 40000
-# This toy example shows gnerally improved performance of MLX models up to Dim=10. 
+# This toy example shows  improved performance of MLX models up to Dim=10.
 
-alpha = 2 # regular variation index of the covariate
+alpha = 2 # regular variation index of the covariates
 np.random.seed(1)
 # un-normalized mean angle of class 0:
 mu0 = np.geomspace(1, 2**(np.sqrt(Dim)), num=Dim)

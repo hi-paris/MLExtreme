@@ -1,29 +1,29 @@
-unsupervised.acp\_module package
+unsupervised.pca package
 ================================
 
 Submodules
 ----------
 
-unsupervised.acp\_module.acp\_function module
+unsupervised.pca.pca module
 ---------------------------------------------
 
-.. automodule:: unsupervised.acp_module.acp_function
+.. automodule:: unsupervised.pca.pca
    :members:
    :undoc-members:
    :show-inheritance:
 
-unsupervised.acp\_module.acp\_plot module
+unsupervised.pca.pca\_plot module
 -----------------------------------------
 
-.. automodule:: unsupervised.acp_module.acp_plot
+.. automodule:: unsupervised.pca.pca\_plot
    :members:
    :undoc-members:
    :show-inheritance:
 
-unsupervised.acp\_module.acp\_useful module
+unsupervised.pca.pca\_utils module
 -------------------------------------------
 
-.. automodule:: unsupervised.acp_module.acp_useful
+.. automodule:: unsupervised.pca.pca\_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ unsupervised.acp\_module.acp\_useful module
 Module contents
 ---------------
 
-.. automodule:: unsupervised.acp_module
+.. automodule:: unsupervised.pca
    :members:
    :undoc-members:
    :show-inheritance:
