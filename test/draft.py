@@ -1,10 +1,9 @@
 # %%
 # # Set working directory if necessary
- import os
- os.getcwd()
-# #os.chdir("../")
-
-# %% 
+import os
+os.getcwd()
+os.chdir("../")
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -53,8 +52,9 @@ bin_array = mlx.binary_large_features(X_test, radius, epsilon=epsilon)
 bin_array
 faces, counts = mlx.damex_0(bin_array)
 # faces_dict = mlx.list_to_dict_size(faces) # # order faces by their dimension: usage??
-faces2, limit_mass = mlx.damex_fit(X_test, radius, epsilon=epsilon, min_counts=0,
-                               standardize=False)
+faces2, limit_mass = mlx.damex_fit(X_test, radius, epsilon=epsilon,
+                                   min_counts=0,
+                                   standardize=False)
 
 print(faces)
 print(faces2)

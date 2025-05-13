@@ -1,40 +1,49 @@
+"""
+Basic tools for Extreme Value Analysis used in specific ML contexts \
+and examples in the MLExtreme package
+
+Author: Anne Sabourin
+Date: 2025
+"""
+
 import numpy as np
 from scipy.special import loggamma  # gamma, betaln
 import matplotlib.pyplot as plt
 import warnings
+
 
 def round_signif(numbers, digits):
     """
     Round each number in a list, NumPy array, or a single float to a specified
     number of significant digits.
 
-    Parameters: 
+    Parameters
     ----------
     numbers : float, list, or np.ndarray
         The number, list, or array of numbers to round.
-    
+
     digits : int
         The number of significant digits to round to.
 
-    Returns:
+    Returns
     -------
     float, list, or np.ndarray
         The rounded numbers in the same format as the input.
 
-    Examples:
+    Examples
     --------
     >>> import numpy as np
     >>> statistics_array = np.array([0.12345, 6.789, 0.00567])
     >>> statistics_list = [0.12345, 6.789, 0.00567]
     >>> single_float = 0.12345
 
-    # Round each element to two significant digits
+    Round each element to two significant digits
 
     >>> rounded_statistics_array = round_signif(statistics_array, 2)
     >>> rounded_statistics_list = round_signif(statistics_list, 2)
     >>> rounded_single_float = round_signif(single_float, 2)
 
-    # Print the rounded statistics
+    Print the rounded statistics
 
     >>> print(f'Statistics (array): {rounded_statistics_array}')
     Statistics (array): [0.12 6.8 0.0057]
@@ -48,12 +57,12 @@ def round_signif(numbers, digits):
         return float(round(numbers, digits -
                            int(np.floor(np.log10(abs(numbers)))) - 1)) if \
                            numbers != 0 else 0.0
-    elif isinstance(numbers, np.ndarray):
+    if isinstance(numbers, np.ndarray):
         # Apply rounding element-wise and return as a NumPy array
         return np.array([float(round(num, digits -
                                      int(np.floor(np.log10(abs(num)))) - 1)) if
                          num != 0 else 0.0 for num in numbers])
-    elif isinstance(numbers, list):
+    if isinstance(numbers, list):
         # Apply rounding element-wise and return as a list
         return [float(round(num, digits -
                             int(np.floor(np.log10(abs(num)))) - 1)) if
@@ -62,25 +71,23 @@ def round_signif(numbers, digits):
         raise TypeError(
             "Input must be a float, list, or NumPy array of floats.")
 
-
 def hill_estimator(x, k):
     """
-    Hill estimator for the tail index based on thee data x, using the
-    k largest order statistics
+    Hill estimator for the tail index based on the data `x`, using the
+    `k` largest order statistics.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     x : array-like
         The input data sample from which to estimate the tail index.
-
-    k : int  >= 2
+    k : int, >= 2
         The number of extreme values to consider for the estimation.
 
-    Returns:
-    --------
+    Returns
+    -------
     dict
-        A dictionary containing the Hill estimator value ('estimate') and its \
-    standard deviation ('sdev').
+        A dictionary containing the Hill estimator value ('estimate') and its
+        standard deviation ('sdev').
     """
     sorted_data = np.sort(x)[::-1]  # Sort data in decreasing order
     hill_estimate = 1 / (k-1) * np.sum(np.log(sorted_data[:k] / sorted_data[k - 1]))
@@ -95,30 +102,31 @@ def rank_transform(x_raw):
 
     This function transforms each element in the input matrix by assigning
     a rank based on its position within its column and then applying a
-    Pareto transformation.
-    The transformation is defined as:
+    Pareto transformation. The transformation is defined as:
 
-    v_rank_ij = (n_sample + 1) / (rank(x_raw_ij) + 1) =
-            1 / ( 1 -  n/(n+1) * F_emp(x_raw_ij) )
+    .. math::
 
-    where `rank(x_raw_ij)` is the rank of the element `x_raw_ij` within its
-    column in decreasing order and F_emp is the usual empirical cdf.
+        v_{\\text{rank},ij} = \\frac{n_{\\text{sample}} + 1}{\\text{rank}(x_{\\text{raw},ij}) + 1} = \\frac{1}{1 - \\frac{n}{n+1} F_{\\text{emp}}(x_{\\text{raw},ij})}
 
-    Parameters:
-    -----------
+    where :math:`\\text{rank}(x_{\\text{raw},ij})` is the rank of the element
+    :math:`x_{\\text{raw},ij}` within its column in decreasing order and
+    :math:`F_{\\text{emp}}` is the usual empirical CDF.
+
+    Parameters
+    ----------
     x_raw : numpy.ndarray
         A 2D array where each column represents a feature and each row
-        represents a sample.
-        The function assumes that the input is a numerical matrix.
+        represents a sample. The function assumes that the input is a
+        numerical matrix.
 
-    Returns:
-    --------
+    Returns
+    -------
     numpy.ndarray
         A transformed matrix of the same shape as `x_raw`, where each element
         has been standardized using the Pareto-based rank transformation.
 
-    Example:
-    --------
+    Example
+    -------
     >>> import numpy as np
     >>> x_raw = np.array([[10, 20], [30, 40], [50, 60]])
     >>> rank_transform(x_raw)
@@ -138,31 +146,35 @@ def rank_transform(x_raw):
 
 def rank_transform_test(x_train, x_test):
     """
-    Transform each column  in x_test to approximate unit pareto distribution \
-    based on the empirical cumulative distribution function (ECDF) resulting \
-    from  the corresponding column in x_train.
+    Transform each column in `x_test` to approximate a unit Pareto distribution
+    based on the empirical cumulative distribution function (ECDF) resulting
+    from the corresponding column in `x_train`.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     x_train : numpy.ndarray
         A 2D array of shape (n, d) representing the training data.
     x_test : numpy.ndarray
-        A 2D array of shape (m, d) representing the test data to be \
-    transformed.
+        A 2D array of shape (m, d) representing the test data to be transformed.
 
-    Returns:
-    --------
+    Returns
+    -------
     numpy.ndarray
-        A transformed version of x_test of shape (m, d), where each element is
-        transformed using the formula: 1 / (1 -  n/(n+1) *  F_emp(x_test_ij)).
-    
-    Example:
-    --------
+        A transformed version of `x_test` of shape (m, d), where each element is
+        transformed using the formula:
+
+        .. math::
+
+            \\frac{1}{1 - \\frac{n}{n+1} F_{\\text{emp}}(x_{\\text{test},ij})}
+
+    Example
+    -------
+    >>> import numpy as np
     >>> x_train = np.array([[1, 2], [3, 4], [5, 6]])
     >>> x_test = np.array([[2, 3], [4, 5]])
     >>> rank_transform_test(x_train, x_test)
     array([[1.33333333, 1.33333333],
-       [2.        , 2.        ]])
+           [2.        , 2.        ]])
     """
     n_samples, n_dim = x_train.shape
     m_samples, _ = x_test.shape
@@ -182,13 +194,6 @@ def rank_transform_test(x_train, x_test):
 
     return x_transf
 
-# # Example usage
-# x_train = np.array([[1, 2], [3, 4], [5, 6]])
-# x_test = np.array([[2, 3], [4, 5]])
-
-# x_transf = rank_transform_test(x_train, x_test)
-# print(x_transf)
-
 
 def normalize_param_dirimix(Mu, wei):
     """
@@ -203,50 +208,48 @@ def normalize_param_dirimix(Mu, wei):
 
     .. math::
 
-        \\sum_{j=1}^k w_j M_{j, \\, \\cdot \\,} = (1/d, \\ldots, 1/d)
-    
+        \\sum_{j=1}^k w_j M_{j, \\cdot} = \\left(\\frac{1}{d}, \\ldots, \\frac{1}{d}\\right)
 
-    The function takes as argument a matrix Mu of dimension (k,d) and a weights
-    vector wei of dimension (,k), and normalizes them in order to satisfy moments
-    constraint on the angular distribution, which arises from
-    Pareto-margins standardization both of them so that each row of
-    the resulting Mu_modif matrix sums to 1, and the barycenter of the
-    rows with weights `wei_modif` is :math:`(1/d, ... 1/d)`.  See Boldi &
-    Davison, Sabourin & Naveau.  The normalization is performed
-    according to the method described in Chiapino et al. (see references below)
+    The function accepts a matrix `Mu` of dimension (k, d) and a weights
+    vector `wei` of dimension (k,). It normalizes these inputs to satisfy
+    the moment constraint on the angular distribution, which is derived from
+    Pareto-margins standardization. This normalization ensures that each row
+    of the resulting `Mu_modif` matrix sums to 1, and the barycenter of the
+    rows, weighted by `wei_modif`, is :math:`(1/d, \\ldots, 1/d)`. For further
+    details, refer to Boldi & Davison and Sabourin & Naveau. The normalization
+    process follows the method described in Chiapino et al. (see references below).
 
-    Parameters:
-    -------------
+    Parameters
+    ----------
     Mu : np.ndarray
         A k x p matrix with positive entries, with rows summing to one.
-    
     wei : np.ndarray
-        A weights vector of length k., with nonnegative entries,summing to one.
+        A weights vector of length k, with nonnegative entries, summing to one.
 
-    Returns:
+    Returns
+    -------
+    tuple
+        A tuple containing:
+            - Mu1 (np.ndarray): The normalized matrix where columns sum to 1.
+            - wei1 (np.ndarray): The updated weights vector of length p.
+
+    Example
+    -------
+    >>> import numpy as np
+    >>> p = 3; k = 2
+    >>> Mu0 = 3*np.random.random(2*3).reshape(k, p)
+    >>> wei0 = 4*np.random.random(k)
+    >>> Mu, wei = normalize_param_dirimix(Mu0, wei0)
+    >>> print(f'row sums of Mu : {np.sum(Mu, axis=1)}')
+    >>> print(f'barycenter of `Mu` rows with weights `wei` : {np.sum(Mu*wei.reshape(-1, 1), axis=0)}')
+
+    References
     ----------
-    A tuple containing:
-        - Mu1 (np.ndarray): The normalized matrix where columns sum to 1.
-        - wei1 (np.ndarray): The updated weights vector of length p.
-
-    Example usage:
-    -----------------
-        >>> p = 3; k = 2
-        >>> Mu0 = 3*np.random.random(2*3).reshape(k, p)
-        >>> wei0 = 4*np.random.random(k)  
-        >>> Mu, wei = normalize_param_dirimix(Mu0, wei0)
-        >>> print(f'row sums of Mu : {np.sum(Mu, axis=1)}')
-        >>> print(f'barycenter of `Mu` rows with weights `wei` : \
-{np.sum(Mu*wei.reshape(-1, 1), axis=0)}')
-
-    References:
-    _______________
     [1] Boldi, M. O., & Davison, A. C. (2007). A mixture model for multivariate extremes. Journal of the Royal Statistical Society Series B: Statistical Methodology, 69(2), 217-229.
-    
+
     [2] Sabourin, A., & Naveau, P. (2014). Bayesian Dirichlet mixture model for multivariate extremes: a re-parametrization. Computational Statistics & Data Analysis, 71, 542-567.
-    
+
     [3] Chiapino, M., Clémençon, S., Feuillard, V., & Sabourin, A. (2020). A multivariate extreme value theory approach to anomaly clustering and visualization. Computational Statistics, 35(2), 607-628.
-    
     """
     Rho = np.diag(wei) @ Mu
     p = Rho.shape[1]
@@ -264,16 +267,15 @@ def gen_dirichlet(a, size=1):
     """
     Generate angular random samples from a `Dirichlet distribution <https://en.wikipedia.org/wiki/Dirichlet_distribution>`_ with parameter `a`.
 
-    Parameters:
-    -----------
-    size : int (optional)
-        Number of samples to generate.
-    
-    a : 1D or 2D np.array, shape (n, p) or (p, )
-        parameters for the Dirichlet distribution of each sample.
+    Parameters
+    ----------
+    a : 1D or 2D np.ndarray, shape (n, p) or (p,)
+        Parameters for the Dirichlet distribution of each sample.
+    size : int, optional
+        Number of samples to generate. Default is 1.
 
-    Returns:
-    --------
+    Returns
+    -------
     ndarray, shape (n, p)
         An array of Dirichlet samples, each normalized to sum to 1.
     """
@@ -298,16 +300,15 @@ def pdf_dirichlet(x, a):
     """
     Evaluate the probability density function of a `Dirichlet distribution <https://en.wikipedia.org/wiki/Dirichlet_distribution>`_ with parameter `a`, at each point represented as a row in the data matrix `x`.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     x : ndarray, shape (n, d) or (d,)
         Data matrix where each row is a point on the (d-1)-dimensional simplex.
-    
     a : ndarray, shape (d,)
-        parameters for the Dirichlet distribution.
+        Parameters for the Dirichlet distribution.
 
-    Returns:
-    --------
+    Returns
+    -------
     ndarray, shape (n,)
         Probability density at each row of `x` for the given Dirichlet
         distribution.
@@ -327,63 +328,56 @@ def pdf_dirichlet(x, a):
 
 
 def pdf_dirimix(x, Mu,  wei, lnu):
-    """Density function of a Dirichlet mixture distribution on the (d-1)-dimensional simplex evaluated at each \
+    """
+    Density function of a Dirichlet mixture distribution on the (d-1)-dimensional simplex evaluated at each
     row in the data matrix `x`.
 
     Each Dirichlet mixture component has weight given by the jth entry
-    of `wei`,  and Dirichlet parameter (see :func:`pdf_dirichlet`) :math:`a_j=\\nu_j \\mu_j`,  where
+    of `wei`, and Dirichlet parameter (see :func:`pdf_dirichlet`) :math:`a_j=\\nu_j \\mu_j`, where
     :math:`\\nu_j = \\exp(\\textrm{lnu}_j)`, :math:`\\mu_j` is the jth
-    row of matrix `Mu`, :math:`\\textrm{lnu}_j` is the jth entry of `lnu`. 
-
-    Parameters:
-    -----------
-    x : ndarray, shape (n, d) or (d,).
-        Data matrix where each row is a point on the (d-1)-dimensional simplex.
-
-    Mu : ndarray, shape (k, d).
-         Matrix of means for the Dirichlet
-    concentration parameters. Each row must contain non-negative
-    entries and sum to one. A  moments constraint arises  from \
-    standardization to unit Pareto margins. This constrain is that 
-    
-    .. math::
-    
-        \\sum_{j=1}^{k} w_j \\mu_j = (1/d, \\ldots, 1/d).
-
-    No warning nor error is issued is that constraint is not satisfied,
-    to encompass more general situations.
-
-    wei : ndarray, shape (k,).
-    Vector of  weights for each mixture component.
-    Nonnegative entries, summing to one. 
-
-    lnu : ndarray, shape (k,).
-    Vector of log-scales for each mixture component.
-
-    Details:
-    _______
+    row of matrix `Mu`, :math:`\\textrm{lnu}_j` is the jth entry of `lnu`.
     The Dirichlet mixture density writes, for `x` in the unit simplex,
-    
+
     .. math::
 
-        f(x, \\textrm{Mu}, \\textrm{wei}, \\textrm{lnu}) = \
-\\sum_{j=0}^{k-1}  \\textrm{wei}[j] \\textrm{dirichlet}(x | \
-\\textrm{Mu}[j, :],\\exp(\\textrm{lnu}[j]) ), 
-    
-    where "dirichlet" is the dirichlet density with parameter
+        f(x, \\textrm{Mu}, \\textrm{wei}, \\textrm{lnu}) = \\sum_{j=0}^{k-1} \
+    \\textrm{wei}[j] \\textrm{dirichlet}(x | \\textrm{Mu}[j, :], \\exp(\\textrm{lnu}[j])),
+
+    where "dirichlet" is the Dirichlet density with parameter \
     :math:`a=\\nu\\mu`,
-
+    
     .. math::
+
+        \\textrm{dirichlet}(x | \\mu, \\nu) = \\frac{\\Gamma(\\nu)}{\\prod_{i=1}^d \\Gamma(\\nu \\mu_i)}\\prod_{i=1}^d x_i^{\\nu \\mu_i - 1}.
+
     
-        \\textrm{dirichlet}(x, | \\mu, \\nu ) = \\frac{\\Gamma(\\nu)}{\
-    \\prod_{i=1}^d \\Gamma(\\nu \\mu_i)} x_i^{\\nu\\mu_i - 1}. 
+
+    Parameters
+    ----------
+    x : ndarray, shape (n, d) or (d,)
+        Data matrix where each row is a point on the (d-1)-dimensional simplex.
+    Mu : ndarray, shape (k, d)
+        Matrix of means for the Dirichlet concentration parameters.
+        Each row must contain non-negative entries and sum to one.
+        A moments constraint arises from standardization to unit Pareto margins.
+        This constraint is that
+
+        .. math::
+
+            \\sum_{j=1}^{k} w_j \\mu_j = \\left(\\frac{1}{d}, \\ldots, \\frac{1}{d}\\right).
+
+        No warning nor error is issued if that constraint is not satisfied, to encompass more general situations.
+    wei : ndarray, shape (k,)
+        Vector of weights for each mixture component. Nonnegative entries, summing to one.
+    lnu : ndarray, shape (k,)
+        Vector of log-scales for each mixture component.
+
     
     
-    Returns:
-    --------
+    Returns
+    -------
     ndarray, shape (n,)
         Density at each row of `x` on the (d-1)-dimensional simplex.
-
     """
     if x.ndim == 1:
         x = x[np.newaxis, :]
@@ -399,9 +393,10 @@ def pdf_dirimix(x, Mu,  wei, lnu):
 
 def gen_dirimix(Mu, wei, lnu, size=1):
     """
-    Generate angular samples from a mixture of Dirichlet distributions described in :func:`pdf_dirimix`
+    Generate angular samples from a mixture of Dirichlet distributions \
+    described in :func:`pdf_dirimix`
 
-    Parameters:
+    Parameters
     -----------
     size : int (optional)
         Number of samples to generate.
@@ -412,11 +407,7 @@ def gen_dirimix(Mu, wei, lnu, size=1):
     lnu : ndarray, shape (k,)
         Vector of log-scales for each mixture component.
 
-    Details:
-    ________
-    See :func:`pdf_dirimix`
-
-    Returns:
+    Returns
     --------
     ndarray, shape (size, p)
         Array of Dirichlet samples generated from the mixture.
@@ -438,12 +429,13 @@ def gen_dirimix(Mu, wei, lnu, size=1):
     return gen_dirichlet(a=matpars, size=n)
 
 
-def plot_pdf_dirimix_2D(Mu, wei, lnu, n_points=500):
+def plot_pdf_dirimix_2D(
+        Mu, wei, lnu, n_points=500):
     """
     Plot the Dirichlet mixture density on the 1-D simplex in \
 ambient dimension 2, see :func:`pdf_dirimix`.
 
-    Parameters:
+    Parameters
     -----------
     Mu : ndarray, shape (2, k)
         Matrix of means for the Dirichlet concentration parameters.
@@ -473,7 +465,7 @@ def plot_pdf_dirimix_3D(Mu,  wei, lnu,  n_points=500):
     Plot the mixture density on the 2D simplex in ambient dimension 3, \
 see :func:`pdf_dirimix`.
 
-    Parameters:
+    Parameters
     -----------
     Mu : ndarray, shape (3, k)
         Matrix of means for the Dirichlet concentration parameters.
@@ -514,17 +506,17 @@ see :func:`pdf_dirimix`.
 # ##############################################
 def gen_PositiveStable(alpha, size=1):
     """
-    Generate positive stable random variables, useful for generating Multivariate Logistic variables,\
-see :func:`gen_multilog'.
+    Generate positive stable random variables, useful for generating \
+    Multivariate Logistic variables, see :func:`gen_multilog`.
 
-    Parameters:
+    Parameters
     -----------
     size : int (optional)
         Sample size.
     alpha : float
         Dependence parameter.
   
-    Returns:
+    Returns
     --------
     ndarray
         Sample of positive stable random variables.
@@ -545,7 +537,7 @@ def gen_multilog(dim, alpha, size=1):
     [1]: Stephenson, A. (2003). Simulating multivariate extreme value distributions of logistic type.\
     Extremes, 6, 49-59.
 
-    Parameters:
+    Parameters
     -----------
     size : int (optional)
         Sample size.
@@ -554,7 +546,7 @@ def gen_multilog(dim, alpha, size=1):
     alpha : float
         Dependence parameter.
   
-    Returns:
+    Returns
     --------
     ndarray
         Sample of multivariate logistic random variables.
@@ -575,20 +567,26 @@ def gen_multilog(dim, alpha, size=1):
 def transform_target_lin(y, X, norm_func):
     """
     Transform the target vector to achieve approximate independence from the
-    norm of X.
+    norm of `X` and stabilize the learning algorithms by preventing large target values
 
     This function rescales the original target vector `y` into
     `y' = y / ||X||` to mitigate the influence of the magnitude of `X` on `y`,
     particularly when `||X||` is large. This transformation is useful for
     predicting missing components in heavy-tailed multivariate data.
 
-    Parameters:
-    - y (array-like): The original target vector to be transformed.
-    - X (array-like): The matrix whose norm is used to rescale `y`.
-    - norm_func (callable): A function that computes the norm of `X`.
+    Parameters
+    ----------
+    y : array-like
+        The original target vector to be transformed.
+    X : array-like
+        The matrix whose norm is used to rescale `y`.
+    norm_func : callable
+        A function that computes the norm of `X`.
 
-    Returns:
-    - y1 (array-like): The rescaled target vector.
+    Returns
+    -------
+    y1 : array-like
+        The rescaled target vector.
     """
     norm_X = norm_func(X)
     y1 = y / norm_X
@@ -599,18 +597,23 @@ def inv_transform_target_lin(y, X, norm_func):
     """
     Inverse transform the rescaled target vector to its original scale.
 
-    This function performs the inverse operation of `transform_target_lin`,
+    This function performs the inverse operation of :func:`transform_target_lin`,
     converting the rescaled target vector back to its original scale by
     multiplying it by the norm of `X`.
 
-    Parameters:
-    - y (array-like): The rescaled target vector to be inverse-transformed.
-    - X (array-like): The matrix whose norm was used to rescale `y`.
-    - norm_func (callable): The same norm function used in
-                            `transform_target_lin`.
+    Parameters
+    ----------
+    y : array-like
+        The rescaled target vector to be inverse-transformed.
+    X : array-like
+        The matrix whose norm was used to rescale `y`.
+    norm_func : callable
+        The same norm function used in `transform_target_lin`.
 
-    Returns:
-    - y_orig (array-like): The original target vector.
+    Returns
+    -------
+    y_orig : array-like
+        The original target vector.
     """
     norm_X = norm_func(X)
     y_orig = y * norm_X
@@ -618,6 +621,31 @@ def inv_transform_target_lin(y, X, norm_func):
 
 
 def transform_target_nonlin(y, X, norm_order):
+    """Non-linearly transform the target vector to achieve \
+    approximate independence from the norm of `X` and stabilize the
+    learning algorithms by preventing large target values
+
+    This function rescales the original target vector `y` into `y' = y\
+    / ||[X, y]||_q` to mitigate the influence of the magnitude of `X`\
+    on `y`, particularly when `||[X, y]||_q` is large. This\
+    transformation is useful for predicting missing components in
+    heavy-tailed multivariate data.
+
+    Parameters
+    ----------
+    y : array-like
+        The original target vector to be transformed.
+    X : array-like
+        The matrix whose norm, combined with `y`, is used to rescale `y`.
+    norm_order : int
+        The order of the norm to be used for the transformation.
+
+    Returns
+    -------
+    array-like
+        The rescaled target vector.
+
+    """
     q = norm_order
     joint = np.hstack((X, y.reshape(-1, 1)))
     norm_full = np.linalg.norm(joint, ord=q, axis=1)
@@ -625,14 +653,73 @@ def transform_target_nonlin(y, X, norm_order):
 
 
 def inv_transform_target_nonlin(y, X, norm_order):
+    """
+    Inverse transform the rescaled target vector to its original scale in a nonlinear fashion. 
+
+    This function performs the inverse operation of
+    :func:`transform_target_nonlin`,
+    converting the rescaled target vector back to its original scale.
+
+    Parameters
+    ----------
+    y : array-like
+        The rescaled target vector to be inverse-transformed.
+    X : array-like
+        The matrix whose norm was used to rescale `y`.
+    norm_order : int
+        The order of the norm used in the transformation.
+
+    Returns
+    -------
+    array-like
+        The original target vector.
+    """
     q = norm_order
     norm_x = np.linalg.norm(X, ord=q, axis=1)
     predicted_x = y/(1-y**q)**(1/q) * norm_x
     return predicted_x
 
-# %% 
+
 def test_indep_radius_rest(X, y, ratio_ext, norm_func,
                            random_state=np.random.randint(10**5)):
+    """Test the independence of the angular component and the\
+    radius of extreme observations.
+
+    This function performs a distance covariance test to assess the
+    independence between the angular component and the radius of
+    extreme observations. It uses a specified ratio to determine the
+    threshold for extreme observations and performs the test for each
+    ratio in `ratio_ext`.
+
+    Parameters
+    ----------
+    X : array-like
+        The input data matrix.
+    y : array-like, optional
+        The target vector. If None, only the angular component of `X` is
+        considered.
+    ratio_ext : float or list of float
+        The ratio(s) used to determine the threshold for extreme observations.
+    norm_func : callable
+        A function that computes the norm of `X`.
+    random_state : int, optional
+        Seed for the random number generator. Default is a random integer.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+            - pvalues (ndarray): The p-values from the independence tests.
+            - ratio_max (float): The maximum ratio for which the p-value is
+                                 greater than 0.05.
+
+    Notes
+    -----
+    - If `y` is None, only the angular component of `X` is considered.
+    - For small sample sizes (< 100), a permutation-based test is used.
+    - For larger sample sizes, an asymptotic test is used.
+    - If no ratios satisfy the condition pvalues > 0.05, a warning is issued and ratio_max is set to 0.
+    """
     from dcor.independence import distance_covariance_test
     from dcor.independence import distance_correlation_t_test
 
@@ -689,6 +776,32 @@ def test_indep_radius_rest(X, y, ratio_ext, norm_func,
 
 
 def plot_indep_radius_rest(pvalues, ratio_ext, ratio_max, n):
+    """Plot the p-values from independence tests performed with \
+    :func:`test_indep_radius_rest` against the number of extreme observations.
+
+    This function creates a scatter plot of p-values from distance
+    correlation tests against the number of extreme observations
+    (k). It also highlights the selected k value based on a
+    rule-of-thumb.
+
+    Parameters
+    ----------
+    pvalues : array-like
+        The p-values from the independence tests.
+    ratio_ext : array-like
+        The ratios used to determine the threshold for extreme observations.
+    ratio_max : float
+        The maximum ratio for which the p-value is greater than 0.05.
+    n : int
+        The total number of observations.
+
+    Notes
+    -----
+    - The plot includes a secondary x-axis showing the ratio (k / n).
+    - The selected k value is highlighted with a red line.
+    - The plot title, labels, and legend are added for clarity.
+
+    """
     kk = (ratio_ext * n).astype(int)
     k_max = int(ratio_max * n)
     fig, ax = plt.subplots()

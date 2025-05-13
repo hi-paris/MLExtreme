@@ -10,7 +10,7 @@
 groups of components of a random vector that are comparatively likely
 to be simultaneously large. Unlike DAMEX, the primary distinction is
 that the subsets are constructed incrementally.  The goal is to
-prevent false discoveries of subsets.Another difference is the CLEF is
+prevent false discoveries of subsets. Another difference is the CLEF is
 not design to recover singleton features.  For a comparison between
 CLEF and DAMEX, refer to the `compare_clef_damex` tutorial.
 
