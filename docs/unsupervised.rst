@@ -1,48 +1,41 @@
-unsupervised package
-====================
+unsupervised subpackage
+=======================
+Unsupervised subpackage for the MLExtreme package. It has three sub-subpackages:\
+`pca` (Principal Component Analysis on Extremes), `feature_clustering` (support identification for extremes) and `mvsets` (Mass-Volume set estimation and anomaly detection)
 
-Subpackages
------------
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 5
+   :caption: Sub-subpackages:
 
    unsupervised.pca
    unsupervised.feature_clustering
-   unsupervised.mvsets
+   unsuperised.mvsets
 
-Submodules
-----------
+..
+   unsupervised.feature\_clustering  Sub-subpackage
+   ------------------------------------------------
 
-unsupervised.pca module
------------------------
-
-.. automodule:: unsupervised.pca
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-unsupervised.mvsets module
-----------------------------
-
-.. automodule:: unsupervised.mvsets
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   .. automodule:: unsupervised.feature\_clustering
+      :members:
+      :undoc-members:
+      :show-inheritance:
 
 
-unsupervised.feature\_clustering module
-----------------------------
+   unsupervised.mvsets sub-subpackage
+   ----------------------------------
 
-.. automodule:: unsupervised.feature\_clustering
-   :members:
-   :undoc-members:
-   :show-inheritance:
-      
-Module contents
----------------
+   .. automodule:: unsupervised.mvsets
+      :members:
+      :undoc-members:
+      :show-inheritance:
 
-.. automodule:: unsupervised
-   :members:
-   :undoc-members:
-   :show-inheritance:
+
+..
+   Module contents
+   ---------------
+
+   .. automodule:: unsupervised
+      :members:
+      :undoc-members:
+      :show-inheritance:

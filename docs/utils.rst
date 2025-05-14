@@ -1,7 +1,10 @@
-utils package
+utils subpackage
 =============
 
-Utilities module for the MLExtreme package. It has two submodules: `dataset_generation` and `EVT_basics`. 
+Utilities subpackage for the MLExtreme package. It has two submodules: `dataset_generation` and `EVT_basics`. 
+
+.. toctree::
+   :maxdepth: 4
 
 
 utils.dataset\_generation module
@@ -16,7 +19,8 @@ utils.dataset\_generation module
 utils.EVT\_basics module
 ------------------------
 
-A toolkit for extreme value analysis including some basic features such as Hill estimation, rank transformation. 
+..
+   A toolkit for extreme value analysis including some basic features such as Hill estimation, rank transformation. 
 
 
 .. automodule:: utils.EVT_basics
@@ -24,11 +28,11 @@ A toolkit for extreme value analysis including some basic features such as Hill 
    :undoc-members:
    :show-inheritance:
 
-..
-   Module contents
-   ---------------
 
-   .. automodule:: utils
-      :members:
-      :undoc-members:
-      :show-inheritance:
+Module contents
+---------------
+
+.. automodule:: utils
+   :members:
+   :undoc-members:
+   :show-inheritance:

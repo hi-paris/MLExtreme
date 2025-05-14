@@ -1,24 +1,15 @@
-supervised package
-==================
+supervised subpackage
+=====================
 
-Submodules
-----------
+Supervised subpackage for the MLExtreme package. It has two submodules: `xcovPredictor` (prediction tasks with extreme covariates) and `supervised_utils` (plotting utilities).
 
-supervised.xcovPredictor module
---------------------------------
+.. toctree::
+   :maxdepth: 3
 
-.. automodule:: supervised.xcovPredictor
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   supervised.xcovPredictor
+   supervised.supervised_utils
 
-supervised.supervised_utils module
-----------------------------
 
-.. automodule:: supervised.supervised_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 
 ..

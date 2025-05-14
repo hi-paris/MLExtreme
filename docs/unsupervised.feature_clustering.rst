@@ -1,10 +1,8 @@
-unsupervised.feature\_clustering package
+unsupervised.feature\_clustering sub-subpackage
 =============================
 
-Submodules
-----------
 
-unsupervised.feature\_clustering.clef module
+unsupervised.feature\_clustering.clef sub-submodule
 ---------------------------------
 
 .. automodule:: unsupervised.feature_clustering.clef
@@ -12,7 +10,7 @@ unsupervised.feature\_clustering.clef module
    :undoc-members:
    :show-inheritance:
 
-unsupervised.feature\_clustering.damex module
+unsupervised.feature\_clustering.damex sub-submodule
 ----------------------------------
 
 .. automodule:: unsupervised.feature_clustering.damex
@@ -21,18 +19,3 @@ unsupervised.feature\_clustering.damex module
    :show-inheritance:
 
 
-unsupervised.feature\_clustering.utilities module
---------------------------------------
-
-.. automodule:: unsupervised.feature_clustering.utilities
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: unsupervised.feature_clustering
-   :members:
-   :undoc-members:
-   :show-inheritance:

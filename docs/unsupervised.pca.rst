@@ -1,37 +1,14 @@
-unsupervised.pca package
+unsupervised.pca sub-subpackage
 ================================
+Principal Component Analysis on the angular component of extremes
 
-Submodules
-----------
 
-unsupervised.pca.pca module
----------------------------------------------
+
+unsupervised.pca.pca sub-submodule
+----------------------------------
 
 .. automodule:: unsupervised.pca.pca
    :members:
    :undoc-members:
    :show-inheritance:
 
-unsupervised.pca.pca\_plot module
------------------------------------------
-
-.. automodule:: unsupervised.pca.pca\_plot
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-unsupervised.pca.pca\_utils module
--------------------------------------------
-
-.. automodule:: unsupervised.pca.pca\_utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: unsupervised.pca
-   :members:
-   :undoc-members:
-   :show-inheritance:
