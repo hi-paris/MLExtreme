@@ -10,7 +10,7 @@ Unsupervised subpackage for the MLExtreme package. It has three sub-subpackages:
 
    unsupervised.pca
    unsupervised.feature_clustering
-   unsuperised.mvsets
+   unsupervised.mvsets
 
 ..
    unsupervised.feature\_clustering  Sub-subpackage
