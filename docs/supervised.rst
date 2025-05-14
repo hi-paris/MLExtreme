@@ -21,10 +21,11 @@ supervised.supervised_utils module
    :show-inheritance:
 
 
-Module contents
----------------
+..
+   Module contents
+   ---------------
 
-.. automodule:: supervised
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   .. automodule:: supervised
+      :members:
+      :undoc-members:
+      :show-inheritance:

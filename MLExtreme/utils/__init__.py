@@ -4,14 +4,7 @@ from .dataset_generation import (
     gen_target_CovariateRV,
     gen_rv_functional_data,
     gen_rv_functional_data_gaussianNoise,
-    gen_subfaces
-)
-
-from .EVT_basics import (
-    round_signif,
-    hill_estimator,
-    rank_transform,
-    rank_transform_test,
+    gen_subfaces,
     normalize_param_dirimix,
     gen_dirichlet,
     pdf_dirichlet,
@@ -24,7 +17,15 @@ from .EVT_basics import (
     transform_target_lin,
     inv_transform_target_lin,
     transform_target_nonlin,
-    inv_transform_target_nonlin,
+    inv_transform_target_nonlin
+ 
+)
+
+from .EVT_basics import (
+    round_signif,
+    hill_estimator,
+    rank_transform,
+    rank_transform_test,
     test_indep_radius_rest,
     plot_indep_radius_rest
 )

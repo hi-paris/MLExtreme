@@ -1,12 +1,11 @@
 utils package
 =============
 
-Submodules
-----------
+Utilities module for the MLExtreme package. It has two submodules: `dataset_generation` and `EVT_basics`. 
+
 
 utils.dataset\_generation module
 --------------------------------
-A toolkit for generating datasets that are regularly varying  (unsupervised setting) or with a regularly varying covariate ocmponent (supervised setting) 
 
 .. automodule:: utils.dataset_generation
    :members:
@@ -15,17 +14,21 @@ A toolkit for generating datasets that are regularly varying  (unsupervised sett
 
 
 utils.EVT\_basics module
------------------------------
+------------------------
+
+A toolkit for extreme value analysis including some basic features such as Hill estimation, rank transformation. 
+
 
 .. automodule:: utils.EVT_basics
    :members:
    :undoc-members:
    :show-inheritance:
 
-Module contents
----------------
+..
+   Module contents
+   ---------------
 
-.. automodule:: utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   .. automodule:: utils
+      :members:
+      :undoc-members:
+      :show-inheritance:
