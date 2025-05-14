@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from . import utilities as ut  # #import binary_large_features
-from ...utils.EVT_basics import rank_transform, round_signif
+from utils.EVT_basics import rank_transform, round_signif
 
 
 class clef:
