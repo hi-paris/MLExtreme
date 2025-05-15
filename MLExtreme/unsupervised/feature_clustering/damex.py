@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from . import utilities as ut
-from utils.EVT_basics import rank_transform, round_signif
+from MLExtreme.utils.EVT_basics import rank_transform, round_signif
 # import pdb
 
 # ################

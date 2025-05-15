@@ -8,7 +8,7 @@ import warnings
 from itertools import combinations
 import networkx as nx
 from sklearn.model_selection import KFold
-from utils.EVT_basics import rank_transform, round_signif
+from MLExtreme.utils.EVT_basics import rank_transform, round_signif
 # from .ftclust_analysis import subfaces_list_to_matrix
 
 def subfaces_list_to_matrix(subfaces, dimension):

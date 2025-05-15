@@ -37,7 +37,7 @@ Implements and illustrates the methodology and theory developed in
 # Set working directory if necessary
 import os
 os.getcwd()
-# os.chdir("../")
+os.chdir("../")
 
 
 # %% [markdown]

@@ -9,7 +9,7 @@ import numpy as np
 from math import isclose
 import matplotlib.pyplot as plt
 from copy import deepcopy
-from utils.EVT_basics import rank_transform, round_signif
+from MLExtreme.utils.EVT_basics import rank_transform, round_signif
 
 
 
