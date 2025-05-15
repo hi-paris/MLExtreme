@@ -120,15 +120,28 @@ class clef:
         return Subfaces, Masses
 
     def deviance(self, Xtest, thresh_test=None, standardize=False):
-        """
-        Calculate the deviance of the model on test data.
+        """Calculate the deviance of the (trained) model on test data, normalized by the extreme sample size.
+
+        First the test data is transformed into a binary matrix, say
+        `test_bin_mat`. Each row corresponds to a sample point which
+        norm exceeds `thresh_test`.  The binary entries indicates
+        which coordinates of a given extreeme point exceed thequantity
+        `epsilon * thresh_test`.
+
+        Then the subfaces previously learnt by the model, together
+        with the associated masses, are compared to `test_bin_mat` in a 
+        a dispersion model.
+
+        TODO continue
+        
 
         Parameters:
         -----------
         Xtest : np.ndarray
             Test data.
         thresh_test : float, optional
-            Threshold for identifying extremes in the test set. If None, the instance's attribute will be used.
+            Threshold for identifying extremes in the test set.
+            If None, the instance's attribute will be used.
         standardize : bool, default=False
             Whether to standardize the data.
 
@@ -136,6 +149,7 @@ class clef:
         --------
         float
             Deviance value.
+
         """
         if self.subfaces is None:
             raise RuntimeError(

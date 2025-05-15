@@ -301,13 +301,13 @@ parameter `epsilon` (or `kappa_min` in CLEF). The ideas are related to
 Jorgensen's *Theory of Dispersion Models*.
 
 We introduce an unsupervised performance metric termed *Total
-Deviance*, inspired by Jorgensen's work. This metric relies on a unit
+Deviance*, a denomination inspired  Jorgensen's work (see  This metric relies on a unit
 deviance function $ d(\text{subface}_1, \text{subface}_2) $, defined
 as in Chiapino et al. as the ratio of the symmetric difference between
 the index sets of two subfaces to the cardinality of the union of
 these index sets.
 
-Given a unit deviance $ d $, the total deviance of an estimated pair
+Given a unit deviance function $ d $, the total deviance of an estimated pair
 (list of subfaces, list of masses) from Damex or CLEF, with respect to
 an extreme dataset, is computed as follows:
 
@@ -350,6 +350,17 @@ implementations of Damex and CLEF include an option to compute the
 deviance of the estimated parameters (list of subfaces and list of
 masses) with respect to the true parameters (list of faces and list of
 weights), and vice versa.
+
+References
+----------
+[1] Cordeiro, G. M., Labouriau, R., & Botter, D. A. (2021). \
+An introduction to Bent Jørgensen’s ideas. Brazilian Journal of Probability and Statistics, 35(1), 2-20.
+
+[2] Jørgensen, B. (1987). Exponential dispersion models. \
+Journal of the Royal Statistical Society Series B: Statistical Methodology, \
+49(2), 127-145.
+
+[3] Jorgensen, B. (1997). The theory of dispersion models. CRC Press.
 
 """
 

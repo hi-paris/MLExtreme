@@ -1,7 +1,9 @@
 """
 File: mvsets.py
 Author: Anne Sabourin
-Date: 2025-05-02
+Date: 2025
+
+
 """
 import numpy as np
 from math import isclose
@@ -116,6 +118,14 @@ def sort_bins_by_mass(X: np.array, J: int) -> list[Angular_bin]:
 class Xmvset:
     """
     Minimum-volume set estimation and anomaly scoring.
+
+    Implements the methods developed in [1].
+
+    Compared with the implementation proposed in [1] the only  difference resides on the data structure manipulation performs to affect points to the building blocks of the mass-volume sets. This doess not affect the output.
+
+    References
+    _________
+    [1] Thomas, A., Clémençon, S., Gramfort, A., & Sabourin, A. (2017, April). Anomaly Detection in Extreme Regions via Empirical MV-sets on the Sphere. In AISTATS (Vol. 54).
     """
 
     def __init__(self, thresh_train=None, thresh_predict=None, J=None):
@@ -519,15 +529,3 @@ class Xmvset:
 #                     score[i] = ang_score / np.max(X_test_extreme[i]) ** 2
 #         return score, X_test_extreme, mask_test
 
-
-# # workflow:
-
-# # input: data
-# # - select extremes and make angles/radii
-
-# # - make sorted angular histogram
-# # - make angular mvsets with of defined (relative) mass level
-# #          --> OUTPUT: ordered list of cases +
-# #           ---> indicator function(level, point)
-# #           --> angular extremal scoring function
-# #           ---> extremal scoring
