@@ -123,16 +123,33 @@ class clef:
         """Calculate the deviance of the (trained) model on test data, normalized by the extreme sample size.
 
         First the test data is transformed into a binary matrix, say
-        `test_bin_mat`. Each row corresponds to a sample point which
+        `testBinary`. Each row corresponds to a sample point which
         norm exceeds `thresh_test`.  The binary entries indicates
-        which coordinates of a given extreeme point exceed thequantity
+        which coordinates of a given extreme point exceed the quantity
         `epsilon * thresh_test`.
 
-        Then the subfaces previously learnt by the model, together
-        with the associated masses, are compared to `test_bin_mat` in a 
-        a dispersion model.
+        Then the subfaces previously learnt by the model (stored in
+        `self.subfaces`), together with the associated masses, are
+        compared to `testBinary` in a a dispersion model.
 
-        TODO continue
+        The basic building block of hte dispersion model is a unit
+        deviance d(subface_i, subface_j) defined between subfaces, as
+        the ratio between the cardinalities of the symmetric
+        difference and the union of the two sets of coordinates
+        defining the suface, see
+        :func:`feature_clustering.utilities.unit_deviance`.
+
+        The total (normalized) deviance is then defined as
+        
+        .. math::
+
+            \\frac{- 2}{n_{extremes}}\\sum_{i=1}^{n_{extremes}} \
+            \\log\\Big( \\sum_{j=1}^{n_{faces}} \
+            w_j \\exp(- rate *d(testBinary_i, subface_j) ) \\Big), 
+
+
+        where `n_{extremes}` is the number of samples which radius
+        exceeds `thresh_test` in `Xtest`, rate=`self.rate`, 
         
 
         Parameters:
@@ -170,7 +187,8 @@ class clef:
         Masses = self.masses
 
         negative_pseudo_lkl = ut.total_deviance(
-            Subfaces, Masses, Xt, self.thresh_test, False, None, rate=self.rate
+            Subfaces, Masses, Xt, self.thresh_test, False, None,
+            rate=self.rate
         )
 
         return 2 * negative_pseudo_lkl

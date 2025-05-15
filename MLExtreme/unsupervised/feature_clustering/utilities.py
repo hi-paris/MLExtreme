@@ -685,12 +685,16 @@ def unit_deviance(subface, subfaces_matrix):
     criterion for parameter tuning.
 
     Parameters:
-    - subface (np.ndarray): Single subface vector (binary vector), typically
-      a test vector.
-    - subfaces_matrix (np.ndarray): Matrix of reference subface vectors
+    -----------
+    subface : np.ndarray)
+        Single subface vector (binary vector), typically
+        a test vector.
+    - subfaces_matrix : np.ndarray)
+        Matrix of reference subface vectors
       (binary entries) (typically, the ones estimated by damex or clef).
 
     Returns:
+    --------
     - np.ndarray: Array of distances.
 
     References:

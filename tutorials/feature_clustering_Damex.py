@@ -328,7 +328,7 @@ complementary set of the unit ball.
 
 The total (log-)deviance is then defined as:
 
-$$ \text{Deviance}(\text{subfaces}, \text{masses}, \text{data}) = -2
+$$ \text{Deviance}(\text{subfaces}, \text{masses}, \text{data}) = \frac{-2}{n_{\text{extremes}}}
 \times \sum_{i \leq n_{\text{extremes}}} \log \left( \sum_{j \leq J}
 p_j \exp(- \text{rate} \times d(X_i, \text{subface}_j)) \right) $$
 
