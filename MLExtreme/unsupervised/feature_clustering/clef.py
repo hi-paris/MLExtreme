@@ -132,12 +132,12 @@ class clef:
         `self.subfaces`), together with the associated masses, are
         compared to `testBinary` in a a dispersion model.
 
-        The basic building block of hte dispersion model is a unit
+        The basic building block of the dispersion model is a unit
         deviance d(subface_i, subface_j) defined between subfaces, as
         the ratio between the cardinalities of the symmetric
         difference and the union of the two sets of coordinates
         defining the suface, see
-        :func:`feature_clustering.utilities.unit_deviance`.
+        :func:`unsupervised.feature_clustering.utilities.unit_deviance`. This is the same unit deviance as the one proposed in Reference [4]  below 
 
         The total (normalized) deviance is then defined as
         
@@ -149,8 +149,22 @@ class clef:
 
 
         where `n_{extremes}` is the number of samples which radius
-        exceeds `thresh_test` in `Xtest`, rate=`self.rate`, 
-        
+        exceeds `thresh_test` in `Xtest`, rate=`self.rate`. It may be seen as
+
+        "Twice the negative pseudo-likelihood in a dispersion model à la Jorgensen, divided by the extreme sample size"
+
+        References:
+        ------------
+        [1] Cordeiro, G. M., Labouriau, R., & Botter, D. A. (2021). \
+        An introduction to Bent Jørgensen’s ideas. Brazilian Journal of Probability and Statistics, 35(1), 2-20.
+
+        [2] Jørgensen, B. (1987). Exponential dispersion models. \
+        Journal of the Royal Statistical Society Series B: Statistical Methodology, \
+        49(2), 127-145.
+
+        [3] Jørgensen, B. (1997). The theory of dispersion models. CRC Press.
+
+        [4] Chiapino, M., & Sabourin, A. (2016, September). Feature clustering for extreme events analysis, with application to extreme stream-flow data. In International workshop on new frontiers in mining complex patterns (pp. 132-147). Cham: Springer International Publishing.
 
         Parameters:
         -----------
@@ -165,7 +179,7 @@ class clef:
         Returns:
         --------
         float
-            Deviance value.
+            Deviance value,that is twice the negative pseudo-likelihood, divided by the number of extremes.
 
         """
         if self.subfaces is None:
@@ -194,8 +208,19 @@ class clef:
         return 2 * negative_pseudo_lkl
 
     def get_AIC(self, Xtrain, standardize=True):
-        """
-        Calculate the Akaike Information Criterion (AIC) for the model.
+        """Calculate the Akaike Information Criterion (AIC) for the
+        model incorporating the normalized deviance from
+        :func:`self.deviance` and the (normalized again) number of
+        components in the model, that is the number of subfaces with
+        positive extreme mass. More precisely the function returns
+
+        self.deviance  + 2 * number_of_subfaces/number_of_extremes
+
+        where whe recall that self.deviance is:
+
+        "twice the negative pseudo log-likelihood in a dispersion model"
+
+        
 
         Parameters:
         -----------
@@ -208,6 +233,7 @@ class clef:
         --------
         float
             AIC value.
+
         """
         if self.masses is None:
             raise RuntimeError("Fit the model before computing the AIC")
@@ -237,7 +263,7 @@ class clef:
         standardize : bool, default=True
             Whether to standardize the data.
         unstable_kappam_max : float, default=0.05
-            Maximum kappa_min value for unstable solutions.
+            Maximum kappa_min value for unstable solutions. The selected value returned by the function will be greater than this parameter. 
         plot : bool, default=False
             Whether to plot the AIC values.
         update_kappa_min : bool, default=False
@@ -303,7 +329,7 @@ class clef:
         random_state=None,
     ):
         """
-        Estimate the expected deviance using cross-validation.
+        Estimate the expected deviance using cross-validation. See :func:`deviance`
 
         Parameters:
         -----------
@@ -419,7 +445,8 @@ class clef:
             )
             plt.scatter(grid, cv_deviance_vect, c="gray", label="CV deviance")
             plt.plot(
-                [tol_cv, tol_cv], [0, deviance_tol_cv], c="red", label="selected value"
+                [tol_cv, tol_cv], [0, deviance_tol_cv], c="red",
+                label="selected value"
             )
             plt.grid()
             plt.legend()
@@ -437,9 +464,35 @@ class clef:
         return tol_cv, deviance_tol_cv, cv_deviance_vect
 
     def deviance_to_true(self, subfaces_true, weights_true):
-        """
-        Calculate the deviance between the estimated subfaces and the true subfaces.
+        """Calculate the deviance between the estimated subfaces and
+        the true subfaces.
 
+        The function  returns a tuple (est_to_truth, truth_to_est) respectively
+        defined as follows:
+
+        .. math::
+
+            \\text{est-to-truth} = -2\
+        \\sum_{j}^{\\text{N-estimated}} \
+        w^{estim}_j \\log \\Big( \
+        \\sum_{i=1}^{\\text{N-true}}\
+       w^{true}_i e^{-\\text{rate}*d(\\text{estimated-subface}_j, \
+        \\text{true-subface}_i)} \
+        \\Big)
+        
+            \\text{tuth-to-est} = -2\
+        \\sum_{i=1}^{\\text{N-true}}\
+         w^{true}_i \\log \\Big( \
+        \\sum_{j}^{\\text{N-estimated}} \
+        w^{estim}_j 
+         e^{-\\text{rate}*d(\\text{estimated-subface}_j, \
+        \\text{true-subface}_i)} \
+        \\Big)
+        
+        where :math:`w^{estim}_j =` self.mass[j-1] / sum(self.masses) and
+        :math:`w^{truth}_j` is the mass of the considered true subface divided
+        by the total mass of extremes 
+        
         Parameters:
         -----------
         subfaces_true : list
@@ -453,6 +506,7 @@ class clef:
             Deviance from estimated to true subfaces.
         truth_to_est : float
             Deviance from true to estimated subfaces.
+
         """
         if self.subfaces is None:
             raise RuntimeError("CLEF has not been fitted yet")
