@@ -1,5 +1,7 @@
+# file: feature_clustering_Clef.py
 # Author: Anne Sabourin
-# Description: CLEF tutorial
+# Description: CLEF tutorial (`unsupervised.feature_clustering' subpackage, `clef` submodule)
+
 
 # %% [markdown]
 # # CLEF tutorial
@@ -14,17 +16,20 @@ prevent false discoveries of subsets. Another difference is the CLEF is
 not design to recover singleton features.  For a comparison between
 CLEF and DAMEX, refer to the `compare_clef_damex` tutorial.
 
-The tutorial relies new methods for selecting the tuning parameter
-$\kappa$ in CLEF, primarily based on AIC and cross-validation. These
-methods involve a specific pseudo-likelihood (a dispersion metric à la
-Jorgensen) for random subsets of features among $\{1, \ldots,
-d\}$. Although these methods lack theoretical investigation, this
-notebook provides empirical evidence supporting the relevance of the
-proposed selection criteria. See the DAMEX tutorial for further
+The tutorial relies on heuristic methods for selecting the tuning
+parameter $\kappa$ in CLEF (ruling how far away a point must be from a
+particular subspace of the sample space to be considered as 'not
+belonging' to that subspace. These parameter selection methods have
+not been considered in the original analysis in [1,2]. The approach
+proposed in this tutorial (and in 'DAMEX' tutorial) rely on a
+pseudo-likelihood (a dispersion metric à la Jorgensen) for random
+subsets of features among $\{1, \ldots, d\}$. Although these methods
+lack theoretical investigation, this notebook provides empirical
+evidence supporting the relevance of the proposed selection
+criteria. See the `feature_clustering_Damex` tutorial for further
 details.
 
-Alternative stopping criteria for CLEF, as proposed in [2], are
-currently not implemented.
+Alternative stopping criteria for CLEF based on asymptotic tests, as proposed in [2], are currently not implemented.
 
 **References:**
 
@@ -38,13 +43,6 @@ groups of variables with the potential of being large
 simultaneously. *Extremes, 22*, 193-222.
 
 """
-
-
-# %%
-# # Set working directory if necessary
-import os
-os.getcwd()
-# #os.chdir("../")
 
 # %% 
 import numpy as np
@@ -112,7 +110,7 @@ print(f'Weights: {np.round(wei, 3)}')
 The `lnu` parameter below is the logarithm of the concentration
 parameter for the Dirichlet mixture. It is a crucial parameter that
 determines the difficulty of the clustering problem. If any
-$\exp(\text{lnu}[i]) \times \text{Mu}[i,j] < 1$, the problem is
+$\exp(\text{lnu}[i] ) \times \text{Mu}[i,j] < 1$, the problem is
 pathologically hard, as the mass on any subface concentrates on the
 boundary of that face. Conversely, if all $\exp(\text{lnu}[i]) \times
 \text{Mu}[i,j] \gg 1$, the problem is very easy.
@@ -320,14 +318,16 @@ a) estimated to true b) true to estimated")
 print(deviance_est_true, deviance_true_est)
 
 
-#%% [markdown]
-""" For this sample size, AIC and CV appear to estimate relatively
+# %% [markdown]
+"""
+For this sample size, AIC and CV appear to estimate relatively
 well the expected deviance Additionally, the deviance between the true
 parameters (faces and masses) and the estimated ones is, in principle,
 similar to the test set estimate of the total deviance, which is also
-observed here.  """
+observed here.
+"""
 
-# %%[markdown]#
+# %% [markdown]
 # ## Choosing Epsilon based on AIC / CV
 # Here and below we propose choosing epsilon in DAMEX using the AIC
 # criterion and  a CV-based selection rule (here
@@ -405,7 +405,9 @@ if True:
 
 # %% [markdown]
 """
-**Conclusion:** All goes as planned:
+*Conclusion:*
+
+All goes as planned:
 
     - deviance on testing set and AIC are very close or even
      indistinguishable as soon as kappa_min is not too small, reflecting
@@ -425,7 +427,8 @@ if True:
 
 - CV deviance is different from test deviance but follows a similar pattern.
 
-** Recommendation** to choose kappa_min, use `select_kappa_min_AIC ` and
+*Recommendation* 
+To choose kappa_min, use `select_kappa_min_AIC ` and
    `select_kappa_min_CV'. The results should be similar. If they are
    not, you are in trouble because the (extreme) sample size may be too small.
 

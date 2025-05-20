@@ -1,15 +1,27 @@
+# file: dirichlet_mixture_model.py
+# Author: Anne Sabourin
+# Description: unsupervised.mvsets: Anomaly scoring on extremes with  Mass-Volume sets
+# Date: May 2025
+
+
+# %% [markdown]
+# # Tutorial notebook for generation of multivariate heavy-tailed (i.e. Regularly varying) datasets with limit angular distribution following a Dirichlet Mixture
+
+# %% [markdown]
+"""
+Useful references about the Dirichlet Mixture model
+
+    * Boldi, M. O., & Davison, A. C. (2007). A mixture model for multivariate extremes. Journal of the Royal Statistical Society Series B: Statistical Methodology, 69(2), 217-229.
+
+    * Sabourin, A., & Naveau, P. (2014). Bayesian Dirichlet mixture model for multivariate extremes: a re-parametrization. Computational Statistics & Data Analysis, 71, 542-567.
+
+    * Chiapino, M., Clémençon, S., Feuillard, V., & Sabourin, A. (2020). A multivariate extreme value theory approach to anomaly clustering and visualization. Computational Statistics, 35(2), 607-628.
+"""
+
+# %%
 import matplotlib.pyplot as plt
 import numpy as np
 import MLExtreme as mlx
-
-# temporary, working version, to be removed
-import os
-os.getcwd()
-# os.chdir("../")
-
-# import importlib
-# importlib.reload(mlx)
-# from MLExtreme.utils import dataset_generation as dg
 
 # test for function rdirichlet
 
@@ -28,28 +40,25 @@ alpha = np.vstack([np.tile(alpha1, (n//2, 1)), np.tile(alpha2, (n//2, 1))])
 samples = mlx.gen_dirichlet(alpha, size=n)
 
 
-# Plot the generated data as a scatter plot with transparency (grey points)
+# Plot the generated data 
 plt.figure(figsize=(8, 6))
 plt.scatter(samples[:, 0], samples[:, 1], color='grey', alpha=0.5,
             label='Generated Samples')
 
-# Labels and title
 plt.xlabel('Component 1')
 plt.ylabel('Component 2')
 plt.title('Scatter plot of Dirichlet Samples with Two Different Alphas')
 plt.legend()
-
-# Show the plot
 plt.grid(True)
 plt.show()
 
-# test for function gen_dirimix (generating angular datasets from
-# a dirichlet mixture)
+# %%
+# Test for function gen_dirimix (generating angular datasets from a dirichlet mixture)
 p = 3  # Number of components in each Dirichlet distribution
 k = 4  # Number of mixture components
 n = 10  # Number of samples
 
-Mu = np.random.rand(k, p)# k* p  matrix of means
+Mu = np.random.rand(k, p) # k* p  matrix of means
 lnu = np.random.rand(k)  # k vector of log-scales
 wei = np.random.rand(k)  # k vector of weights
 
@@ -59,8 +68,8 @@ samples = mlx.gen_dirimix(Mu, wei, lnu, size=n)
 # Print the generated samples
 print(samples)
 
-# plot example of dirichlet mixture
-
+# %%
+# Plot the output
 
 # Parameters for the example
 n = 500  # Number of samples
@@ -91,30 +100,33 @@ plt.ylabel("Component 2")
 plt.grid(True)
 plt.show()
 
-# density plots  with angular density plotting functions #
+# %% [markdown]
+# Density plots  with angular density plotting functions
 
+# %%
 #  (2D example)
 
 # Plot the mixture density
 
 mlx.plot_pdf_dirimix_2D(Mu,  wei, lnu)
 
-# 3D example (angular density)
+# %%
+# (3D example)
 Mu = np.array([[0.2, 0.7, 0.1], [0.1, 0.3, 0.6]])  # Means for 3 components
 lnu = np.log(15) * np.ones(2)  # log(10) for each component
 wei = np.array([0.5, 0.5])  # Mixture weights
-Mu,wei = mlx.normalize_param_dirimix(Mu,wei)
-
-# Plot the mixture density on the 2D simplex
+Mu, wei = mlx.normalize_param_dirimix(Mu, wei)
 
 mlx.plot_pdf_dirimix_3D(Mu, wei, lnu)
 
-# Examples of dataset generation
-# in the tail model for regular variation
+# %% [markdown]
+# Generation of multivariate heavy-tailed data
 # X = R * Theta
-# R is Pareto ; Theta ~ Dirichlet mixture
-# This type of sdata is called RV-dirimix from now on
+# R is Pareto distributed ; Theta ~ Dirichlet mixture depending on R,
+# The ditribution of Theta|R = r converges to a limit distribution for large r.
+# This type of data is called RV-dirimix here and throughout.
 
+# %%
 # Example RV-dirimix  data generation p = 2
 n = 5000  # Number of samples
 p = 2  # Dimensionality of the simplex (2D in this case)
@@ -132,14 +144,16 @@ Mu_wei = wei  @ Mu
 print(Mu_wei)
 mlx.plot_pdf_dirimix_2D(Mu, wei, lnu)
 
-# Generate the dataset using the gen_rv_dirimix function
-# as an adversarial (bulk) angular parameter, choose center of the simplex 
+# %%
+# Generate the dataset using the gen_rv_dirimix function.
+# As an adversarial (bulk) angular parameter, use the  center of the simplex
 X = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, index_weight_noise=3,
                        Mu_bulk=(np.ones(p)/p).reshape(1, p),
-                       wei_bulk = np.ones(1),
-                       lnu_bulk= np.ones(1) * np.log(2), 
+                       wei_bulk=np.ones(1),
+                       lnu_bulk=np.ones(1) * np.log(2),
                        size=n)
 
+# %%
 # Plotting the dataset (2D plot), rescale for easier visualization
 X_disp = X**(alpha/4)
 idex = np.sum(X**alpha, axis=1) > 10
@@ -160,6 +174,7 @@ axs[1].set_ylim(0, max_range)
 axs[1].set_title('2D Scatter Plot of Extreme Generated Points')
 plt.show()
 
+# %%
 # Example usage p = 3
 n = 500  # Number of samples
 p = 3  # Dimensionality of the simplex
@@ -169,12 +184,10 @@ alpha = 2.5  # Shape parameter of the Pareto distribution
 Mu = np.array([[0.2, 0.7, 0.1], [0.1, 0.3, 0.6]])  # Means for 3 components
 lnu = np.log(15) * np.ones(2)  # log(10) for each component
 wei = np.array([0.5, 0.5])  # Mixture weights
-Mu,wei = mlx.normalize_param_dirimix(Mu,wei)
+Mu, wei = mlx.normalize_param_dirimix(Mu, wei)
 
-# Generate the dataset
+# Generate the dataset and plot the output
 X = mlx.gen_rv_dirimix(alpha, Mu, wei, lnu, size=n)
-
-# from mpl_toolkits.mplot3d import Axes3D
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')

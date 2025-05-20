@@ -84,6 +84,3 @@ Finally, this package reflects the collective efforts of several past PhD studen
 ## License
 This project is licensed under the [MIT License](LICENSE).
 
-## Package structure
- TODO
-

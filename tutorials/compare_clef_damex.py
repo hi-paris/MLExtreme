@@ -1,8 +1,12 @@
+# file: compare_clef_damex.py
 # Author: Anne Sabourin
-# Description: DAMEX/CLEF tutorial: comparison
+# Date: May 2025
+# Description: DAMEX/CLEF tutorial (`unsupervised.feature_clustering` sub-package: comparison
 
 # %% [markdown]
-# # Comparison between CLEF and DAMEX.
+# # Comparison between CLEF and DAMEX from the `unsupervised.feature_clustering` sub-package.
+
+# %% [markdown]
 """
 
 This notebook demonstrates a typical scenario where DAMEX frequently

@@ -5,7 +5,7 @@
 
 
 # %% [markdown]
-# # Tutorial notebook for classification on extreme covariates
+# # Tutorial notebook for classification on extreme covariates, `supervised` sub-package
 
 # %% [markdown]
 """
@@ -27,17 +27,6 @@ Implements and illustrates the methodology and theory developed in
 # * [Choice of k: Episode 2, cross-validation](#Choice_k_2)
 # * [Conclusion: comparison](#conclusion)
 # * [Nonstandard covariates: rank-transformation ](#nonstandard)
-
-
-# %% [markdown]
-# ## Preliminary manipulations <a class="anchor" id="Preliminary"></a>
-
-
-# %%
-# Set working directory if necessary
-import os
-os.getcwd()
-os.chdir("../")
 
 
 # %% [markdown]

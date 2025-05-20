@@ -145,6 +145,8 @@ class damex:
         """
         Calculate the deviance of the model on test data.
 
+        For more details see :func:`clef.deviance`
+
         Parameters:
         -----------
         Xtest : np.ndarray
