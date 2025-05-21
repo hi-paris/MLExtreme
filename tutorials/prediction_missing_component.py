@@ -26,12 +26,6 @@ Implements and illustrates an example and associated method  suggested in
 
 
 # %%
-# Set working directory if necessary
-import os
-os.getcwd()
-# os.chdir("../")
-
-# %%
 # imports 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,7 +43,7 @@ import MLExtreme as mlx
 Choose a norm function according to which 'extreme' covariates will be
 selected. Change `norm_order` to 1, 3, ... for variants.
 
-**N.B.** inf is only applicable to the linear transform below, not the
+**N.B.** `np.inf` is only applicable to the linear transform below, not the
 nonlinear  transform
 """
 

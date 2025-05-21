@@ -1,6 +1,6 @@
 # %% [markdown]
 # Author: Anne Sabourin
-# Description: DAMEX tutorial
+# Description: DAMEX tutorial (`unsupervised.feature_clustering' subpackage, `damex` submodule)
 
 
 # %% [markdown]
@@ -26,13 +26,6 @@ representation of multivariate extremes with applications to anomaly
 detection. Journal of Multivariate Analysis, 161, 12-31.
 
 """
-
-
-# %%
-# # Set working directory if necessary
-import os
-os.getcwd()
-# #os.chdir("../")
 
 # %%
 import numpy as np
