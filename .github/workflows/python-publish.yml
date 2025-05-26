@@ -5,7 +5,7 @@ on:
   release:
     branches:
       - main
-    types: [created]
+    types: [edited]
 
 
 jobs:
