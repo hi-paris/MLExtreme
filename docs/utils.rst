@@ -1,5 +1,5 @@
 utils subpackage
-=============
+=================
 
 Utilities subpackage for the MLExtreme package. It has two submodules: `dataset_generation` and `EVT_basics`. 
 
