@@ -28,17 +28,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip wheel
- ##         pip install -r requirements.txt
- ##         
-##    - name: Build the docs
-##        working-directory: docs
-##        run: make html
-##
-##      - name: Deploy to GitHub Pages
-##        uses: peaceiris/actions-gh-pages@v3
-##        with:
-##          github_token: ${{ secrets.GITHUB_TOKEN }}
-##          publish_dir: docs/_build/html
+          pip install -r requirements.txt
+          
+      - name: Build the docs
+        working-directory: docs
+        run: make html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/_build/html
           
 
       - name: Build wheels
