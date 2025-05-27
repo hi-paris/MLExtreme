@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>utils subpackage &#8212; MLExtreme 0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=8dde47fa"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="unsupervised.mvsets sub-subpackage" href="unsupervised.mvsets.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="utils-subpackage">
+<h1>utils subpackage<a class="headerlink" href="#utils-subpackage" title="Link to this heading">¶</a></h1>
+<p>Utilities subpackage for the MLExtreme package. It has two submodules: <cite>dataset_generation</cite> and <cite>EVT_basics</cite>.</p>
+<div class="toctree-wrapper compound">
+</div>
+<section id="module-utils.dataset_generation">
+<span id="utils-dataset-generation-module"></span><h2>utils.dataset_generation module<a class="headerlink" href="#module-utils.dataset_generation" title="Link to this heading">¶</a></h2>
+<p>Submodule for Dataset Generation and Plotting Utilities</p>
+<p>This submodule provides essential functions for generating datasets and plotting utilities used throughout the MLExtreme package. It focuses on the Pareto Margins convention for modeling multivariate extremes, featuring an angular component that follows a flexible Dirichlet Mixture distribution. Additionally, the submodule includes implementations of the multivariate symmetric Logistic model.</p>
+<p>For supervised learning scenarios, the submodule supports the generation of datasets consisting of covariate-target pairs, where the target can be either binary or continuous. The covariates are designed to be regularly varying, and the submodule also includes functionality for rescaling targets.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.bulk_decay_fun_default">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">bulk_decay_fun_default</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">radius</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rv_index</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#bulk_decay_fun_default"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.bulk_decay_fun_default" title="Link to this definition">¶</a></dt>
+<dd><p>Default bulk decay function for generating continuous target values
+in a regression model.</p>
+<p>This function applies a decay transformation to the input radii,
+and returns : <cite>1 / (radius) ** (rv_index)</cite></p>
+<p>The ouput is used in function <a class="reference internal" href="#utils.dataset_generation.gen_target_CovariateRV" title="utils.dataset_generation.gen_target_CovariateRV"><code class="xref py py-func docutils literal notranslate"><span class="pre">gen_target_CovariateRV()</span></code></a> as a     weight to be attributed to the bulk regression function, and the     final regression function in <a class="reference internal" href="#utils.dataset_generation.gen_target_CovariateRV" title="utils.dataset_generation.gen_target_CovariateRV"><code class="xref py py-func docutils literal notranslate"><span class="pre">gen_target_CovariateRV()</span></code></a> is a     weighted average between a bulk and a tail component.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>radius</strong> (<em>np.ndarray</em>) – A 1D array representing the radial distances. Each element
+corresponds to the radius of a data point in the covariate space.</p></li>
+<li><p><strong>rv_index</strong> (<em>float</em>) – A positive float that determines the rate of decay. Higher values
+result in faster decay. This parameter allows for adjustment of
+the decay function’s sensitivity to changes in radius.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An array containing the result of applying the decay function to
+each element in the <cite>radius</cite> array. The output represents the
+decayed values, which can be used to weight the contributions of
+different data points in a regression model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.bulk_reg_fun_default">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">bulk_reg_fun_default</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#bulk_reg_fun_default"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.bulk_reg_fun_default" title="Link to this definition">¶</a></dt>
+<dd><p>Default bulk regression function for generating target values.</p>
+<p>This function is used internally as an argument for
+<a class="reference internal" href="#utils.dataset_generation.gen_target_CovariateRV" title="utils.dataset_generation.gen_target_CovariateRV"><code class="xref py py-func docutils literal notranslate"><span class="pre">gen_target_CovariateRV()</span></code></a>.  The regression function in the
+bulk is defined in a linear model, y = &lt; beta, angle &gt;. <cite>angle</cite> is
+meant to be the angular component of the original input, and
+<cite>beta</cite> is a hard-set vectors with the first half of its entries
+equal to 0.1, and  the rest equal to 10.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>angle</strong> (<em>np.ndarray</em>) – A 1D or 2D array representing angular components of the data.
+Each element corresponds to an angle in the covariate space. If
+<cite>angle</cite> is a 2D array, each row represents a different
+observation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The result of the dot product between the <cite>angle</cite> array and the
+vector <cite>beta</cite>. This output represents the bulk regression values
+for the input angles, which can be used to generate target values
+in a regression model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_PositiveStable">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_PositiveStable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_PositiveStable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_PositiveStable" title="Link to this definition">¶</a></dt>
+<dd><p>Generate positive stable random variables, useful for generating     Multivariate Logistic variables, see <a class="reference internal" href="#utils.dataset_generation.gen_multilog" title="utils.dataset_generation.gen_multilog"><code class="xref py py-func docutils literal notranslate"><span class="pre">gen_multilog()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – Sample size.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Dependence parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sample of positive stable random variables.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_classif_data_diriClasses">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_classif_data_diriClasses</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mu0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">array([0.7,</span> <span class="pre">0.3])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_weight_noise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_classif_data_diriClasses"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_classif_data_diriClasses" title="Link to this definition">¶</a></dt>
+<dd><p>Generate synthetic classification data with two classes using a Dirichlet mixture model.</p>
+<p>This function generates synthetic data for binary classification tasks. It creates two classes
+of data points using a Dirichlet mixture model, where each class is characterized by different
+mean parameters. The data points are generated using the <cite>gen_rv_dirimix</cite> function, which
+combines Pareto-distributed radii with Dirichlet-distributed angular components.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mu0</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>d</em><em>,</em><em>)</em><em>, </em><em>optional</em>) – Mean parameter for the first class. Default is np.array([0.7, 0.3]).</p></li>
+<li><p><strong>lnu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em><em>, </em><em>optional</em>) – Log-scale parameters for the Dirichlet mixture components. If not provided, it is calculated
+based on the mean parameters.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Shape parameter of the Pareto distribution. Default is 4.</p></li>
+<li><p><strong>index_weight_noise</strong> (<em>float</em><em>, </em><em>optional</em>) – Exponent ruling how the noise vanishes for large R. Default is 1.</p></li>
+<li><p><strong>size</strong> (<em>int</em><em>, </em><em>optional</em>) – Total number of samples to generate. Default is 10.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>X</strong> (<em>ndarray, shape (n, d)</em>) – Array of generated data points.</p></li>
+<li><p><strong>y</strong> (<em>ndarray, shape (n,)</em>) – Array of class labels corresponding to the data points.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function first normalizes the mean parameters and weights for the Dirichlet mixture model.
+It then generates data points for each class using the <cite>gen_rv_dirimix</cite> function, combining them
+into a single dataset. The class labels are randomly permuted to ensure a balanced dataset.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_dirichlet">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_dirichlet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_dirichlet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_dirichlet" title="Link to this definition">¶</a></dt>
+<dd><p>Generate angular random samples from a <a class="reference external" href="https://en.wikipedia.org/wiki/Dirichlet_distribution">Dirichlet distribution</a> with parameter <cite>a</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> (<em>1D</em><em> or </em><em>2D np.ndarray</em><em>, </em><em>shape</em><em> (</em><em>n</em><em>, </em><em>p</em><em>) or </em><em>(</em><em>p</em><em>,</em><em>)</em>) – Parameters for the Dirichlet distribution of each sample.</p></li>
+<li><p><strong>size</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of samples to generate. Default is 1.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An array of Dirichlet samples, each normalized to sum to 1.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray, shape (n, p)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_dirimix">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_dirimix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_dirimix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_dirimix" title="Link to this definition">¶</a></dt>
+<dd><p>Generate angular samples from a mixture of Dirichlet distributions     described in <a class="reference internal" href="#utils.dataset_generation.pdf_dirimix" title="utils.dataset_generation.pdf_dirimix"><code class="xref py py-func docutils literal notranslate"><span class="pre">pdf_dirimix()</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – Number of samples to generate.</p></li>
+<li><p><strong>Mu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>, </em><em>p</em><em>)</em>) – Matrix of means for the Dirichlet components.</p></li>
+<li><p><strong>wei</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of weights for each mixture component.</p></li>
+<li><p><strong>lnu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of log-scales for each mixture component.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Array of Dirichlet samples generated from the mixture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray, shape (size, p)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_multilog">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_multilog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_multilog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_multilog" title="Link to this definition">¶</a></dt>
+<dd><p>Generate multivariate symmetric logistic random variables via Algorithm 2.1 in [1].</p>
+<p>[1]: Stephenson, A. (2003). Simulating multivariate extreme value distributions of logistic type.    Extremes, 6, 49-59.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int</em><em> (</em><em>optional</em><em>)</em>) – Sample size.</p></li>
+<li><p><strong>dim</strong> (<em>int</em>) – Dimension.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Dependence parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sample of multivariate logistic random variables.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_rv_dirimix">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_rv_dirimix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alpha</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Mu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">array([[0.5,</span> <span class="pre">0.5]])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">array([1])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">array([2])</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_weight_noise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_weight_noise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Mu_bulk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei_bulk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu_bulk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_rv_dirimix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_rv_dirimix" title="Link to this definition">¶</a></dt>
+<dd><p>Generate <cite>n</cite> points according to a multivariate regularly varying     distribution (heavy-tailed) with regular variation <cite>alpha</cite>.</p>
+<p>Each point is generated as <cite>X_i = R_i * Theta_i</cite>, where R_i and
+Theta_i are not independent in the bulk.</p>
+<p>The noise influence decreases proportionally to
+<cite>(scale_weight_noise/R)**(index_weight_noise)</cite>, where <cite>R</cite> is the 1-norm of the sample point.
+This means that as the radius <cite>R</cite> increases, the noise’s effect diminishes, controlled by the
+<cite>scale_weight_noise</cite> and <cite>index_weight_noise</cite> parameters.</p>
+<p>Theta is generated as a weighted average of two components:
+- A “bulk” component, which dominates for small to moderate radii.
+- A “tail” component, which becomes more significant as the radius increases.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of samples to generate. Default is 1.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em><em>, </em><em>optional</em>) – Shape parameter of the Pareto distribution. Default is 1.</p></li>
+<li><p><strong>Mu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>d</em><em>)</em>) – Means for the Dirichlet mixture components.</p></li>
+<li><p><strong>wei</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Weights for each mixture component.</p></li>
+<li><p><strong>lnu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Log-scale parameters for the Dirichlet mixture components.</p></li>
+<li><p><strong>Mu_bulk</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>d</em><em>)</em><em>, </em><em>optional</em>) – Parameter matrix of same dimension as Mu, ruling the angular distribution for small to moderate radii.</p></li>
+<li><p><strong>scale_weight_noise</strong> (<em>float</em><em>, </em><em>optional</em>) – Scaling factor (&gt;0) for the angular noise. It controls the overall magnitude of the noise added to the angular component.
+A larger value increases the noise influence, making points more dispersed, while a smaller value reduces noise effect.
+Default is 1.</p></li>
+<li><p><strong>index_weight_noise</strong> (<em>float</em><em>, </em><em>optional</em>) – Exponent ruling how the noise vanishes for large R. It determines how quickly the noise’s influence diminishes as the radius <cite>R</cite> increases.
+A higher value makes the noise vanish more rapidly, resulting in less noisy points for larger radii.
+Default is -alpha.</p></li>
+<li><p><strong>wei_bulk</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em><em>, </em><em>optional</em>) – Weights for each mixture component in the bulk distribution.</p></li>
+<li><p><strong>lnu_bulk</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em><em>, </em><em>optional</em>) – Log-scale parameters for the Dirichlet mixture components in the bulk distribution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Array of points generated from the Pareto and Dirichlet mixture.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray, shape (n, d)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_rv_functional_data">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_rv_functional_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alphanoise</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scalenoise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om3</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om4</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_rv_functional_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_rv_functional_data" title="Link to this definition">¶</a></dt>
+<dd><p>Generate random regularly varying functions on a grid using
+Pareto-distributed coefficients and noise components.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_samples</strong> (<em>int</em>) – Number of samples to generate.</p></li>
+<li><p><strong>grid</strong> (<em>array-like</em>) – 1D array representing the grid over which the basis functions are
+evaluated.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Shape parameter for the ‘signal’ Pareto-distributed variables.</p></li>
+<li><p><strong>alphanoise</strong> (<em>float</em>) – Shape parameter for the noise Pareto-distributed variables.</p></li>
+<li><p><strong>scalenoise</strong> (<em>float</em><em>, </em><em>optional</em>) – Scaling factor for the noise components. Default is 5.</p></li>
+<li><p><strong>om1</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4.</p></li>
+<li><p><strong>om2</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4.</p></li>
+<li><p><strong>om3</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4.</p></li>
+<li><p><strong>om4</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>ndarray</em> – A 2D NumPy array of shape <cite>(num_samples, len(grid))</cite>, where each row</p></li>
+<li><p><em>represents a generated functional data sample.</em></p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_rv_functional_data_gaussianNoise">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_rv_functional_data_gaussianNoise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_samples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scalenoise</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om3</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om4</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om5</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">om6</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">6</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_rv_functional_data_gaussianNoise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_rv_functional_data_gaussianNoise" title="Link to this definition">¶</a></dt>
+<dd><p>Generate random regularly varying functions on a grid using
+Pareto-distributed coefficients and Gaussian noise components.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_samples</strong> (<em>int</em>) – Number of samples to generate.</p></li>
+<li><p><strong>grid</strong> (<em>array-like</em>) – 1D array representing the grid over which the basis functions are
+evaluated.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Shape parameter for the Pareto-distributed variables.</p></li>
+<li><p><strong>sd</strong> (<em>float</em>) – Standard deviation for the Gaussian noise components.</p></li>
+<li><p><strong>scalenoise</strong> (<em>float</em><em>, </em><em>optional</em>) – Scaling factor for the noise components. Default is 5.</p></li>
+<li><p><strong>om1</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4, 5, 6.</p></li>
+<li><p><strong>om2</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4, 5, 6.</p></li>
+<li><p><strong>om3</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4, 5, 6.</p></li>
+<li><p><strong>om4</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4, 5, 6.</p></li>
+<li><p><strong>om5</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4, 5, 6.</p></li>
+<li><p><strong>om6</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequencies used in the sine and cosine basis functions.
+Defaults are 1, 2, 3, 4, 5, 6.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A 2D NumPy array of shape <cite>(num_samples, len(grid))</cite>, where each row
+represents a generated data sample.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_subfaces">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_subfaces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dimension</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_subfaces</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_geometric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.25</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prevent_inclusions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_subfaces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_subfaces" title="Link to this definition">¶</a></dt>
+<dd><p>Generates a list of random subsets (subfaces) of the set {1, …, dimension}.</p>
+<p>This function is used for data generation in feature clustering algorithms.
+It creates random subsets of a specified dimension, ensuring that each subset
+meets certain size and inclusion criteria.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dimension</strong> (<em>int</em>) – Dimensionality of the ambient space, i.e., the range of indices for the subsets.</p></li>
+<li><p><strong>num_subfaces</strong> (<em>int</em>) – Number of subfaces of size &gt;= 2 to generate.</p></li>
+<li><p><strong>max_size</strong> (<em>int</em><em>, </em><em>optional</em>) – Maximum size of a subface. Default is 8.</p></li>
+<li><p><strong>p_geometric</strong> (<em>float</em><em>, </em><em>optional</em>) – Parameter for the geometric distribution ruling the size of subfaces.
+Default is 0.25.</p></li>
+<li><p><strong>prevent_inclusions</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, ensures that no subface is a subset or superset of another.
+Default is True.</p></li>
+<li><p><strong>seed</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for random number generation to ensure reproducibility.
+Default is None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of generated subfaces, where each subface is represented as a list of integers.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The function uses a geometric distribution to determine the size of each subface.
+It ensures that each feature (index) is included in at least one subface to allow
+for standardized components in the associated random vector (dataset).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.gen_target_CovariateRV">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">gen_target_CovariateRV</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tail_reg_fun=&lt;function</span> <span class="pre">tail_reg_fun_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_reg_fun=&lt;function</span> <span class="pre">bulk_reg_fun_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bulk_decay_fun=&lt;function</span> <span class="pre">bulk_decay_fun_default&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_decay_fun=2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#gen_target_CovariateRV"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.gen_target_CovariateRV" title="Link to this definition">¶</a></dt>
+<dd><p>Generate target values for covariate random variables.</p>
+<p>This function generates target values for a given set of covariate data
+by combining tail and bulk regression functions with a decay function.
+The resulting target values are influenced by both the tail and bulk
+regression functions, weighted by the decay function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>np.ndarray</em>) – A 2D array representing covariate data. Each row corresponds to a
+different observation, and each column corresponds to a different
+covariate.</p></li>
+<li><p><strong>tail_reg_fun</strong> (<em>function</em><em>, </em><em>optional</em>) – A function that computes the tail regression values based on the
+angular components of the covariate data. Default is
+<cite>tail_reg_fun_default</cite>.</p></li>
+<li><p><strong>bulk_reg_fun</strong> (<em>function</em><em>, </em><em>optional</em>) – A function that computes the bulk regression values based on the
+angular components of the covariate data. Default is
+<cite>bulk_reg_fun_default</cite>.</p></li>
+<li><p><strong>bulk_decay_fun</strong> (<em>function</em><em>, </em><em>optional.</em>) – A function that computes the
+weight of the bulk component of the regression function,
+based on the radial components of the covariate data. Default
+is <cite>bulk_decay_fun_default</cite>.</p></li>
+<li><p><strong>param_decay_fun</strong> (<em>any</em><em>, </em><em>optional.</em>) – An additional parameter to be
+passed to <cite>bulk_decay_fun</cite>. If <cite>bulk_decay_fun_default</cite> is
+used, then <cite>param_decay_fun</cite> is the regular variation index of
+the weight, as a function of the radius. Default is 2. Larger
+values induce a more rapidly decaying bulk weight.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>y</strong> – An array of generated target values corresponding to the input
+covariate data. The target values are computed as a weighted
+combination of the tail and bulk regression values, with added
+Gaussian noise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.inv_transform_target_lin">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">inv_transform_target_lin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#inv_transform_target_lin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.inv_transform_target_lin" title="Link to this definition">¶</a></dt>
+<dd><p>Inverse transform the rescaled target vector to its original scale.</p>
+<p>This function performs the inverse operation of <a class="reference internal" href="#utils.dataset_generation.transform_target_lin" title="utils.dataset_generation.transform_target_lin"><code class="xref py py-func docutils literal notranslate"><span class="pre">transform_target_lin()</span></code></a>,
+converting the rescaled target vector back to its original scale by
+multiplying it by the norm of <cite>X</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y</strong> (<em>array-like</em>) – The rescaled target vector to be inverse-transformed.</p></li>
+<li><p><strong>X</strong> (<em>array-like</em>) – The matrix whose norm was used to rescale <cite>y</cite>.</p></li>
+<li><p><strong>norm_func</strong> (<em>callable</em>) – The same norm function used in <cite>transform_target_lin</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>y_orig</strong> – The original target vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array-like</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.inv_transform_target_nonlin">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">inv_transform_target_nonlin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_order</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#inv_transform_target_nonlin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.inv_transform_target_nonlin" title="Link to this definition">¶</a></dt>
+<dd><p>Inverse transform the rescaled target vector to its original scale in a nonlinear fashion.</p>
+<p>This function performs the inverse operation of
+<a class="reference internal" href="#utils.dataset_generation.transform_target_nonlin" title="utils.dataset_generation.transform_target_nonlin"><code class="xref py py-func docutils literal notranslate"><span class="pre">transform_target_nonlin()</span></code></a>,
+converting the rescaled target vector back to its original scale.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y</strong> (<em>array-like</em>) – The rescaled target vector to be inverse-transformed.</p></li>
+<li><p><strong>X</strong> (<em>array-like</em>) – The matrix whose norm was used to rescale <cite>y</cite>.</p></li>
+<li><p><strong>norm_order</strong> (<em>int</em>) – The order of the norm used in the transformation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The original target vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array-like</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.normalize_param_dirimix">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">normalize_param_dirimix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#normalize_param_dirimix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.normalize_param_dirimix" title="Link to this definition">¶</a></dt>
+<dd><p>Modifies the Dirichlet centers matrix <cite>Mu</cite> and the weights <cite>wei</cite>
+for the Dirichlet mixture model in Pareto margins in order to
+satisfy a moments constraint on the angular distribution of
+extremes.</p>
+<p>The constraint is that <span class="math notranslate nohighlight">\(E(\Theta) = (1/d, \ldots, 1/d)\)</span>, where
+<span class="math notranslate nohighlight">\(d\)</span> is the dimension of the ambient space. For a Dirichlet
+mixture density with parameters <span class="math notranslate nohighlight">\(w = wei, M=Mu\)</span>, this is equivalent to</p>
+<div class="math notranslate nohighlight">
+\[\sum_{j=1}^k w_j M_{j, \cdot} = \left(\frac{1}{d}, \ldots, \frac{1}{d}\right)\]</div>
+<p>The function accepts a matrix <cite>Mu</cite> of dimension (k, d) and a weights
+vector <cite>wei</cite> of dimension (k,). It normalizes these inputs to satisfy
+the moment constraint on the angular distribution, which is derived from
+Pareto-margins standardization. This normalization ensures that each row
+of the resulting <cite>Mu_modif</cite> matrix sums to 1, and the barycenter of the
+rows, weighted by <cite>wei_modif</cite>, is <span class="math notranslate nohighlight">\((1/d, \ldots, 1/d)\)</span>. For further
+details, refer to Boldi &amp; Davison and Sabourin &amp; Naveau. The normalization
+process follows the method described in Chiapino et al. (see references below).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Mu</strong> (<em>np.ndarray</em>) – A k x p matrix with positive entries, with rows summing to one.</p></li>
+<li><p><strong>wei</strong> (<em>np.ndarray</em>) – A weights vector of length k, with nonnegative entries, summing to one.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple containing:</dt><dd><ul class="simple">
+<li><p>Mu1 (np.ndarray): The normalized matrix where columns sum to 1.</p></li>
+<li><p>wei1 (np.ndarray): The updated weights vector of length p.</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">p</span> <span class="o">=</span> <span class="mi">3</span><span class="p">;</span> <span class="n">k</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Mu0</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">wei0</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Mu</span><span class="p">,</span> <span class="n">wei</span> <span class="o">=</span> <span class="n">normalize_param_dirimix</span><span class="p">(</span><span class="n">Mu0</span><span class="p">,</span> <span class="n">wei0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;row sums of Mu : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Mu</span><span class="p">,</span><span class="w"> </span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;barycenter of `Mu` rows with weights `wei` : </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Mu</span><span class="o">*</span><span class="n">wei</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">),</span><span class="w"> </span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="rubric">References</p>
+<p>[1] Boldi, M. O., &amp; Davison, A. C. (2007). A mixture model for multivariate extremes. Journal of the Royal Statistical Society Series B: Statistical Methodology, 69(2), 217-229.</p>
+<p>[2] Sabourin, A., &amp; Naveau, P. (2014). Bayesian Dirichlet mixture model for multivariate extremes: a re-parametrization. Computational Statistics &amp; Data Analysis, 71, 542-567.</p>
+<p>[3] Chiapino, M., Clémençon, S., Feuillard, V., &amp; Sabourin, A. (2020). A multivariate extreme value theory approach to anomaly clustering and visualization. Computational Statistics, 35(2), 607-628.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.pdf_dirichlet">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">pdf_dirichlet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#pdf_dirichlet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.pdf_dirichlet" title="Link to this definition">¶</a></dt>
+<dd><p>Evaluate the probability density function of a <a class="reference external" href="https://en.wikipedia.org/wiki/Dirichlet_distribution">Dirichlet distribution</a> with parameter <cite>a</cite>, at each point represented as a row in the data matrix <cite>x</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n</em><em>, </em><em>d</em><em>) or </em><em>(</em><em>d</em><em>,</em><em>)</em>) – Data matrix where each row is a point on the (d-1)-dimensional simplex.</p></li>
+<li><p><strong>a</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>d</em><em>,</em><em>)</em>) – Parameters for the Dirichlet distribution.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Probability density at each row of <cite>x</cite> for the given Dirichlet
+distribution.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray, shape (n,)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.pdf_dirimix">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">pdf_dirimix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#pdf_dirimix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.pdf_dirimix" title="Link to this definition">¶</a></dt>
+<dd><p>Density function of a Dirichlet mixture distribution on the (d-1)-dimensional simplex evaluated at each
+row in the data matrix <cite>x</cite>.</p>
+<p>Each Dirichlet mixture component has weight given by the jth entry
+of <cite>wei</cite>, and Dirichlet parameter (see <a class="reference internal" href="#utils.dataset_generation.pdf_dirichlet" title="utils.dataset_generation.pdf_dirichlet"><code class="xref py py-func docutils literal notranslate"><span class="pre">pdf_dirichlet()</span></code></a>) <span class="math notranslate nohighlight">\(a_j=\nu_j \mu_j\)</span>, where
+<span class="math notranslate nohighlight">\(\nu_j = \exp(\textrm{lnu}_j)\)</span>, <span class="math notranslate nohighlight">\(\mu_j\)</span> is the jth
+row of matrix <cite>Mu</cite>, <span class="math notranslate nohighlight">\(\textrm{lnu}_j\)</span> is the jth entry of <cite>lnu</cite>.
+The Dirichlet mixture density writes, for <cite>x</cite> in the unit simplex,</p>
+<div class="math notranslate nohighlight">
+\[f(x, \textrm{Mu}, \textrm{wei}, \textrm{lnu}) = \sum_{j=0}^{k-1}     \textrm{wei}[j] \textrm{dirichlet}(x | \textrm{Mu}[j, :], \exp(\textrm{lnu}[j])),\]</div>
+<p>where “dirichlet” is the Dirichlet density with parameter     <span class="math notranslate nohighlight">\(a=\nu\mu\)</span>,</p>
+<div class="math notranslate nohighlight">
+\[\textrm{dirichlet}(x | \mu, \nu) = \frac{\Gamma(\nu)}{\prod_{i=1}^d \Gamma(\nu \mu_i)}\prod_{i=1}^d x_i^{\nu \mu_i - 1}.\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>n</em><em>, </em><em>d</em><em>) or </em><em>(</em><em>d</em><em>,</em><em>)</em>) – Data matrix where each row is a point on the (d-1)-dimensional simplex.</p></li>
+<li><p><strong>Mu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>, </em><em>d</em><em>)</em>) – <p>Matrix of means for the Dirichlet concentration parameters.
+Each row must contain non-negative entries and sum to one.
+A moments constraint arises from standardization to unit Pareto margins.
+This constraint is that</p>
+<div class="math notranslate nohighlight">
+\[\sum_{j=1}^{k} w_j \mu_j = \left(\frac{1}{d}, \ldots, \frac{1}{d}\right).\]</div>
+<p>No warning nor error is issued if that constraint is not satisfied, to encompass more general situations.</p>
+</p></li>
+<li><p><strong>wei</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of weights for each mixture component. Nonnegative entries, summing to one.</p></li>
+<li><p><strong>lnu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of log-scales for each mixture component.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Density at each row of <cite>x</cite> on the (d-1)-dimensional simplex.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray, shape (n,)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.plot_pdf_dirimix_2D">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">plot_pdf_dirimix_2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#plot_pdf_dirimix_2D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.plot_pdf_dirimix_2D" title="Link to this definition">¶</a></dt>
+<dd><p>Plot the Dirichlet mixture density on the 1-D simplex in ambient dimension 2, see <a class="reference internal" href="#utils.dataset_generation.pdf_dirimix" title="utils.dataset_generation.pdf_dirimix"><code class="xref py py-func docutils literal notranslate"><span class="pre">pdf_dirimix()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Mu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>2</em><em>, </em><em>k</em><em>)</em>) – Matrix of means for the Dirichlet concentration parameters.</p></li>
+<li><p><strong>lnu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of log-scales for each mixture component.</p></li>
+<li><p><strong>wei</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of weights for each mixture component.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of points to use for evaluating the density. Default is 500.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.plot_pdf_dirimix_3D">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">plot_pdf_dirimix_3D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Mu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wei</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lnu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">500</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#plot_pdf_dirimix_3D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.plot_pdf_dirimix_3D" title="Link to this definition">¶</a></dt>
+<dd><p>Plot the mixture density on the 2D simplex in ambient dimension 3, see <a class="reference internal" href="#utils.dataset_generation.pdf_dirimix" title="utils.dataset_generation.pdf_dirimix"><code class="xref py py-func docutils literal notranslate"><span class="pre">pdf_dirimix()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>Mu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>3</em><em>, </em><em>k</em><em>)</em>) – Matrix of means for the Dirichlet concentration parameters.</p></li>
+<li><p><strong>lnu</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of log-scales for each mixture component.</p></li>
+<li><p><strong>wei</strong> (<em>ndarray</em><em>, </em><em>shape</em><em> (</em><em>k</em><em>,</em><em>)</em>) – Vector of weights for each mixture component.</p></li>
+<li><p><strong>n_points</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of points to use for evaluating the density. Default is 500.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.tail_reg_fun_default">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">tail_reg_fun_default</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#tail_reg_fun_default"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.tail_reg_fun_default" title="Link to this definition">¶</a></dt>
+<dd><p>Default tail regression function for generating target values.</p>
+<p>This function is used internally as an argument for
+<a class="reference internal" href="#utils.dataset_generation.gen_target_CovariateRV" title="utils.dataset_generation.gen_target_CovariateRV"><code class="xref py py-func docutils literal notranslate"><span class="pre">gen_target_CovariateRV()</span></code></a>.  The regression function in the
+tail is defined in a linear model, y = &lt; beta, angle &gt;. <cite>angle</cite> is
+meant to be the angular component of the original input, and
+<cite>beta</cite> is a hard-set vectors with the first half of its entries
+equal to 10, and  the rest equal to 0.1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>angle</strong> (<em>np.ndarray</em>) – A 1D or 2D array representing angular components of the data.
+Each element corresponds to an angle in the covariate space. If
+<cite>angle</cite> is a 2D array, each row represents a different observation.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The result of the dot product between the <cite>angle</cite> array and the
+vector <cite>beta</cite>. This output represents the tail regression values
+for the input angles, which can be used to generate target values
+in a tail regression model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.transform_target_lin">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">transform_target_lin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_func</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#transform_target_lin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.transform_target_lin" title="Link to this definition">¶</a></dt>
+<dd><p>Transform the target vector to achieve approximate independence from the
+norm of <cite>X</cite> and stabilize the learning algorithms by preventing large target values</p>
+<p>This function rescales the original target vector <cite>y</cite> into
+<cite>y’ = y / ||X||</cite> to mitigate the influence of the magnitude of <cite>X</cite> on <cite>y</cite>,
+particularly when <cite>||X||</cite> is large. This transformation is useful for
+predicting missing components in heavy-tailed multivariate data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y</strong> (<em>array-like</em>) – The original target vector to be transformed.</p></li>
+<li><p><strong>X</strong> (<em>array-like</em>) – The matrix whose norm is used to rescale <cite>y</cite>.</p></li>
+<li><p><strong>norm_func</strong> (<em>callable</em>) – A function that computes the norm of <cite>X</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>y1</strong> – The rescaled target vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array-like</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.dataset_generation.transform_target_nonlin">
+<span class="sig-prename descclassname"><span class="pre">utils.dataset_generation.</span></span><span class="sig-name descname"><span class="pre">transform_target_nonlin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_order</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/dataset_generation.html#transform_target_nonlin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.dataset_generation.transform_target_nonlin" title="Link to this definition">¶</a></dt>
+<dd><p>Non-linearly transform the target vector to achieve     approximate independence from the norm of <cite>X</cite> and stabilize the
+learning algorithms by preventing large target values</p>
+<p>This function rescales the original target vector <cite>y</cite> into <cite>y’ = y    / ||[X, y]||_q</cite> to mitigate the influence of the magnitude of <cite>X</cite>    on <cite>y</cite>, particularly when <cite>||[X, y]||_q</cite> is large. This    transformation is useful for predicting missing components in
+heavy-tailed multivariate data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y</strong> (<em>array-like</em>) – The original target vector to be transformed.</p></li>
+<li><p><strong>X</strong> (<em>array-like</em>) – The matrix whose norm, combined with <cite>y</cite>, is used to rescale <cite>y</cite>.</p></li>
+<li><p><strong>norm_order</strong> (<em>int</em>) – The order of the norm to be used for the transformation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The rescaled target vector.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array-like</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="utils-evt-basics-module">
+<h2>utils.EVT_basics module<a class="headerlink" href="#utils-evt-basics-module" title="Link to this heading">¶</a></h2>
+<p id="module-utils.EVT_basics">Tools for Extreme Value Analysis in the MLExtreme Package</p>
+<p>This submodule provides essential tools for conducting Extreme Value Analysis (EVA) in various contexts and examples within the MLExtreme package. It includes functionalities for rank transformation and a specialized tool for selecting extreme thresholds based on distance covariance tests. These tools are designed to support both multivariate supervised and unsupervised settings, facilitating robust analysis and decision-making in extreme value scenarios.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.EVT_basics.hill_estimator">
+<span class="sig-prename descclassname"><span class="pre">utils.EVT_basics.</span></span><span class="sig-name descname"><span class="pre">hill_estimator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/EVT_basics.html#hill_estimator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.EVT_basics.hill_estimator" title="Link to this definition">¶</a></dt>
+<dd><p>Hill estimator for the tail index based on the data <cite>x</cite>, using the
+<cite>k</cite> largest order statistics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>array-like</em>) – The input data sample from which to estimate the tail index.</p></li>
+<li><p><strong>k</strong> (<em>int</em><em>, </em><em>&gt;= 2</em>) – The number of extreme values to consider for the estimation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A dictionary containing the Hill estimator value (‘estimate’) and its
+standard deviation (‘sdev’).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.EVT_basics.plot_indep_radius_rest">
+<span class="sig-prename descclassname"><span class="pre">utils.EVT_basics.</span></span><span class="sig-name descname"><span class="pre">plot_indep_radius_rest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pvalues</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio_ext</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio_max</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/EVT_basics.html#plot_indep_radius_rest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.EVT_basics.plot_indep_radius_rest" title="Link to this definition">¶</a></dt>
+<dd><p>Plot the p-values from independence tests performed with     <a class="reference internal" href="#utils.EVT_basics.test_indep_radius_rest" title="utils.EVT_basics.test_indep_radius_rest"><code class="xref py py-func docutils literal notranslate"><span class="pre">test_indep_radius_rest()</span></code></a> against the number of extreme observations.</p>
+<p>This function creates a scatter plot of p-values from distance
+correlation tests against the number of extreme observations
+(k). It also highlights the selected k value based on a
+rule-of-thumb.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pvalues</strong> (<em>array-like</em>) – The p-values from the independence tests.</p></li>
+<li><p><strong>ratio_ext</strong> (<em>array-like</em>) – The ratios used to determine the threshold for extreme observations.</p></li>
+<li><p><strong>ratio_max</strong> (<em>float</em>) – The maximum ratio for which the p-value is greater than 0.05.</p></li>
+<li><p><strong>n</strong> (<em>int</em>) – The total number of observations.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>The plot includes a secondary x-axis showing the ratio (k / n).</p></li>
+<li><p>The selected k value is highlighted with a red line.</p></li>
+<li><p>The plot title, labels, and legend are added for clarity.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.EVT_basics.rank_transform">
+<span class="sig-prename descclassname"><span class="pre">utils.EVT_basics.</span></span><span class="sig-name descname"><span class="pre">rank_transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_raw</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/EVT_basics.html#rank_transform"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.EVT_basics.rank_transform" title="Link to this definition">¶</a></dt>
+<dd><p>Standardize each column of the input matrix using a Pareto-based
+rank transformation.</p>
+<p>This function transforms each element in the input matrix by assigning
+a rank based on its position within its column and then applying a
+Pareto transformation. The transformation is defined as:</p>
+<div class="math notranslate nohighlight">
+\[v_{\text{rank},ij} = \frac{n_{\text{sample}} + 1}{\text{rank}(x_{\text{raw},ij}) + 1} = \frac{1}{1 - \frac{n}{n+1} F_{\text{emp}}(x_{\text{raw},ij})}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\text{rank}(x_{\text{raw},ij})\)</span> is the rank of the element
+<span class="math notranslate nohighlight">\(x_{\text{raw},ij}\)</span> within its column in decreasing order and
+<span class="math notranslate nohighlight">\(F_{\text{emp}}\)</span> is the usual empirical CDF.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x_raw</strong> (<em>numpy.ndarray</em>) – A 2D array where each column represents a feature and each row
+represents a sample. The function assumes that the input is a
+numerical matrix.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A transformed matrix of the same shape as <cite>x_raw</cite>, where each element
+has been standardized using the Pareto-based rank transformation.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_raw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">],</span> <span class="p">[</span><span class="mi">30</span><span class="p">,</span> <span class="mi">40</span><span class="p">],</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">60</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rank_transform</span><span class="p">(</span><span class="n">x_raw</span><span class="p">)</span>
+<span class="go">array([[1.33333333, 1.33333333],</span>
+<span class="go">       [2.        , 2.        ],</span>
+<span class="go">       [4.        , 4.        ]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.EVT_basics.rank_transform_test">
+<span class="sig-prename descclassname"><span class="pre">utils.EVT_basics.</span></span><span class="sig-name descname"><span class="pre">rank_transform_test</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_test</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/EVT_basics.html#rank_transform_test"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.EVT_basics.rank_transform_test" title="Link to this definition">¶</a></dt>
+<dd><p>Transform each column in <cite>x_test</cite> to approximate a unit Pareto distribution
+based on the empirical cumulative distribution function (ECDF) resulting
+from the corresponding column in <cite>x_train</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x_train</strong> (<em>numpy.ndarray</em>) – A 2D array of shape (n, d) representing the training data.</p></li>
+<li><p><strong>x_test</strong> (<em>numpy.ndarray</em>) – A 2D array of shape (m, d) representing the test data to be transformed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A transformed version of <cite>x_test</cite> of shape (m, d), where each element is
+transformed using the formula:</p>
+<div class="math notranslate nohighlight">
+\[\frac{1}{1 - \frac{n}{n+1} F_{\text{emp}}(x_{\text{test},ij})}\]</div>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">],</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_test</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rank_transform_test</span><span class="p">(</span><span class="n">x_train</span><span class="p">,</span> <span class="n">x_test</span><span class="p">)</span>
+<span class="go">array([[1.33333333, 1.33333333],</span>
+<span class="go">       [2.        , 2.        ]])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.EVT_basics.round_signif">
+<span class="sig-prename descclassname"><span class="pre">utils.EVT_basics.</span></span><span class="sig-name descname"><span class="pre">round_signif</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">numbers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">digits</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/EVT_basics.html#round_signif"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.EVT_basics.round_signif" title="Link to this definition">¶</a></dt>
+<dd><p>Round each number in a list, NumPy array, or a single float to a specified
+number of significant digits.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>numbers</strong> (<em>float</em><em>, </em><em>list</em><em>, or </em><em>np.ndarray</em>) – The number, list, or array of numbers to round.</p></li>
+<li><p><strong>digits</strong> (<em>int</em>) – The number of significant digits to round to.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The rounded numbers in the same format as the input.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float, list, or np.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statistics_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.12345</span><span class="p">,</span> <span class="mf">6.789</span><span class="p">,</span> <span class="mf">0.00567</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">statistics_list</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.12345</span><span class="p">,</span> <span class="mf">6.789</span><span class="p">,</span> <span class="mf">0.00567</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">single_float</span> <span class="o">=</span> <span class="mf">0.12345</span>
+</pre></div>
+</div>
+<p>Round each element to two significant digits</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">rounded_statistics_array</span> <span class="o">=</span> <span class="n">round_signif</span><span class="p">(</span><span class="n">statistics_array</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rounded_statistics_list</span> <span class="o">=</span> <span class="n">round_signif</span><span class="p">(</span><span class="n">statistics_list</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rounded_single_float</span> <span class="o">=</span> <span class="n">round_signif</span><span class="p">(</span><span class="n">single_float</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Print the rounded statistics</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Statistics (array): </span><span class="si">{</span><span class="n">rounded_statistics_array</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">Statistics (array): [0.12 6.8 0.0057]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Statistics (list): </span><span class="si">{</span><span class="n">rounded_statistics_list</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">Statistics (list): [0.12, 6.8, 0.0057]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Single float: </span><span class="si">{</span><span class="n">rounded_single_float</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<span class="go">Single float: 0.12</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.EVT_basics.test_indep_radius_rest">
+<span class="sig-prename descclassname"><span class="pre">utils.EVT_basics.</span></span><span class="sig-name descname"><span class="pre">test_indep_radius_rest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ratio_ext</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_func</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">54704</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/utils/EVT_basics.html#test_indep_radius_rest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#utils.EVT_basics.test_indep_radius_rest" title="Link to this definition">¶</a></dt>
+<dd><p>Test the independence of the angular component and the    radius of extreme observations.</p>
+<p>This function performs a distance covariance test to assess the
+independence between the angular component and the radius of
+extreme observations. It uses a specified ratio to determine the
+threshold for extreme observations and performs the test for each
+ratio in <cite>ratio_ext</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>array-like</em>) – The input data matrix.</p></li>
+<li><p><strong>y</strong> (<em>array-like</em><em>, </em><em>optional</em>) – The target vector. If None, only the angular component of <cite>X</cite> is
+considered.</p></li>
+<li><p><strong>ratio_ext</strong> (<em>float</em><em> or </em><em>list</em><em> of </em><em>float</em>) – The ratio(s) used to determine the threshold for extreme observations.</p></li>
+<li><p><strong>norm_func</strong> (<em>callable</em>) – A function that computes the norm of <cite>X</cite>.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for the random number generator. Default is a random integer.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple containing:</dt><dd><ul class="simple">
+<li><p>pvalues (ndarray): The p-values from the independence tests.</p></li>
+<li><dl class="simple">
+<dt>ratio_max (float): The maximum ratio for which the p-value is</dt><dd><p>greater than 0.05.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>If <cite>y</cite> is None, only the angular component of <cite>X</cite> is considered.</p></li>
+<li><p>For small sample sizes (&lt; 100), a permutation-based test is used.</p></li>
+<li><p>For larger sample sizes, an asymptotic test is used.</p></li>
+<li><p>If no ratios satisfy the condition pvalues &gt; 0.05, a warning is issued and ratio_max is set to 0.</p></li>
+</ul>
+<p class="rubric">References</p>
+<p>The method is inspired by the paper:</p>
+<p>Wan, P., &amp; Davis, R. A. (2019). Threshold selection for multivariate heavy-tailed data. Extremes, 22(1), 131-166.</p>
+</dd></dl>
+
+</section>
+<section id="module-utils">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-utils" title="Link to this heading">¶</a></h2>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">MLExtreme</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="supervised.html">supervised subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="unsupervised.html">unsupervised subpackage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">utils subpackage</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-utils.dataset_generation">utils.dataset_generation module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.bulk_decay_fun_default"><code class="docutils literal notranslate"><span class="pre">bulk_decay_fun_default()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.bulk_reg_fun_default"><code class="docutils literal notranslate"><span class="pre">bulk_reg_fun_default()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_PositiveStable"><code class="docutils literal notranslate"><span class="pre">gen_PositiveStable()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_classif_data_diriClasses"><code class="docutils literal notranslate"><span class="pre">gen_classif_data_diriClasses()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_dirichlet"><code class="docutils literal notranslate"><span class="pre">gen_dirichlet()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_dirimix"><code class="docutils literal notranslate"><span class="pre">gen_dirimix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_multilog"><code class="docutils literal notranslate"><span class="pre">gen_multilog()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_rv_dirimix"><code class="docutils literal notranslate"><span class="pre">gen_rv_dirimix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_rv_functional_data"><code class="docutils literal notranslate"><span class="pre">gen_rv_functional_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_rv_functional_data_gaussianNoise"><code class="docutils literal notranslate"><span class="pre">gen_rv_functional_data_gaussianNoise()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_subfaces"><code class="docutils literal notranslate"><span class="pre">gen_subfaces()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.gen_target_CovariateRV"><code class="docutils literal notranslate"><span class="pre">gen_target_CovariateRV()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.inv_transform_target_lin"><code class="docutils literal notranslate"><span class="pre">inv_transform_target_lin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.inv_transform_target_nonlin"><code class="docutils literal notranslate"><span class="pre">inv_transform_target_nonlin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.normalize_param_dirimix"><code class="docutils literal notranslate"><span class="pre">normalize_param_dirimix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.pdf_dirichlet"><code class="docutils literal notranslate"><span class="pre">pdf_dirichlet()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.pdf_dirimix"><code class="docutils literal notranslate"><span class="pre">pdf_dirimix()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.plot_pdf_dirimix_2D"><code class="docutils literal notranslate"><span class="pre">plot_pdf_dirimix_2D()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.plot_pdf_dirimix_3D"><code class="docutils literal notranslate"><span class="pre">plot_pdf_dirimix_3D()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.tail_reg_fun_default"><code class="docutils literal notranslate"><span class="pre">tail_reg_fun_default()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.transform_target_lin"><code class="docutils literal notranslate"><span class="pre">transform_target_lin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.dataset_generation.transform_target_nonlin"><code class="docutils literal notranslate"><span class="pre">transform_target_nonlin()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#utils-evt-basics-module">utils.EVT_basics module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#utils.EVT_basics.hill_estimator"><code class="docutils literal notranslate"><span class="pre">hill_estimator()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.EVT_basics.plot_indep_radius_rest"><code class="docutils literal notranslate"><span class="pre">plot_indep_radius_rest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.EVT_basics.rank_transform"><code class="docutils literal notranslate"><span class="pre">rank_transform()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.EVT_basics.rank_transform_test"><code class="docutils literal notranslate"><span class="pre">rank_transform_test()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.EVT_basics.round_signif"><code class="docutils literal notranslate"><span class="pre">round_signif()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#utils.EVT_basics.test_indep_radius_rest"><code class="docutils literal notranslate"><span class="pre">test_indep_radius_rest()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-utils">Module contents</a></li>
+</ul>
+</li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="unsupervised.mvsets.html" title="previous chapter">unsupervised.mvsets sub-subpackage</a></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Anne Sabourin, Pierre-Antoine Amiand-Leroy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/utils.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

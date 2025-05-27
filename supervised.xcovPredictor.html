@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>supervised.xcovPredictor submodule &#8212; MLExtreme 0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=27fed22d" />
+    <script src="_static/documentation_options.js?v=8dde47fa"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="supervised.supervised_utils submodule" href="supervised.supervised_utils.html" />
+    <link rel="prev" title="supervised subpackage" href="supervised.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-supervised.xcovPredictor">
+<span id="supervised-xcovpredictor-submodule"></span><h1>supervised.xcovPredictor submodule<a class="headerlink" href="#module-supervised.xcovPredictor" title="Link to this heading">¶</a></h1>
+<p>Module for Supervised Learning with Heavy-Tailed Covariates</p>
+<p>This module supports supervised binary classification and regression tasks with squared error loss, specifically designed for scenarios involving heavy-tailed (regularly varying) covariates.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">supervised.xcovPredictor.</span></span><span class="sig-name descname"><span class="pre">xcovPredictor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">task</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">norm_func</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/supervised/xcovPredictor.html#xcovPredictor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A prediction model for extreme value analysis, tailored for classification    or regression tasks on the tails of the covariate distribution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>task</strong> (<em>str</em>) – The type of prediction task, either ‘regression’ or ‘classification’.</p></li>
+<li><p><strong>model</strong> (<em>object</em>) – The model used for prediction, must have <cite>.fit</cite> and <cite>.predict</cite> methods.</p></li>
+<li><p><strong>norm_func</strong> (<em>callable</em><em>, </em><em>optional</em>) – Function to compute the norm of input data. Defaults to L2 norm.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.task">
+<span class="sig-name descname"><span class="pre">task</span></span><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.task" title="Link to this definition">¶</a></dt>
+<dd><p>The type of prediction task.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.model">
+<span class="sig-name descname"><span class="pre">model</span></span><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.model" title="Link to this definition">¶</a></dt>
+<dd><p>A deep copy of the model provided during initialization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.norm_func">
+<span class="sig-name descname"><span class="pre">norm_func</span></span><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.norm_func" title="Link to this definition">¶</a></dt>
+<dd><p>The norm function used for selecting extremes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>callable</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.thresh_train">
+<span class="sig-name descname"><span class="pre">thresh_train</span></span><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.thresh_train" title="Link to this definition">¶</a></dt>
+<dd><p>Training threshold, set after fitting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.ratio_train">
+<span class="sig-name descname"><span class="pre">ratio_train</span></span><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.ratio_train" title="Link to this definition">¶</a></dt>
+<dd><p>Ratio of extreme training samples to total training samples, set after fitting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">fit(X_train,</span> <span class="pre">y_train,</span> <span class="pre">k=None,</span> <span class="pre">thresh_train=None):</span></span></dt>
+<dd><p>Fit the model using extreme points from the training data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">predict(X_test,</span> <span class="pre">thresh_predict=None):</span></span></dt>
+<dd><p>Predict the target from extreme test covariates.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">cross_validate(X,</span> <span class="pre">y,</span> <span class="pre">thresh_train=None,</span> <span class="pre">thresh_predict=None,</span> <span class="pre">cv=5,</span> <span class="pre">scoring=None,</span> <span class="pre">random_state=None):</span></span></dt>
+<dd><p>Evaluate the generalization risk using cross-validation.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.cross_validate">
+<span class="sig-name descname"><span class="pre">cross_validate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_train</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_predict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scoring</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/supervised/xcovPredictor.html#xcovPredictor.cross_validate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.cross_validate" title="Link to this definition">¶</a></dt>
+<dd><p>Perform cross-validation and return the mean score, standard deviation, and scores.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X</strong> (<em>array-like</em><em>, </em><em>shape</em><em> (</em><em>n_samples</em><em>, </em><em>n_features</em><em>)</em>) – Input samples.</p></li>
+<li><p><strong>y</strong> (<em>array-like</em><em>, </em><em>shape</em><em> (</em><em>n_samples</em><em>,</em><em>)</em>) – Target values.</p></li>
+<li><p><strong>thresh_train</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for extreme values during training.</p></li>
+<li><p><strong>thresh_predict</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for extreme values during prediction.</p></li>
+<li><p><strong>cv</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of folds for cross-validation. Default is 5.</p></li>
+<li><p><strong>scoring</strong> (<em>callable</em><em>, </em><em>optional</em>) – Scoring function to evaluate predictions.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em>, </em><em>optional</em>) – Seed for random number generation.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>mean_score</strong> (<em>float</em>) – Mean score from cross-validation.</p></li>
+<li><p><strong>std_err_mean</strong> (<em>float</em>) – Estimated standard deviation of the mean score.</p></li>
+<li><p><strong>scores</strong> (<em>list of float</em>) – Scores from each fold of the cross-validation.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_train</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_train</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/supervised/xcovPredictor.html#xcovPredictor.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Fit the model using extreme points from the training data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X_train</strong> (<em>array-like</em><em>, </em><em>shape</em><em> (</em><em>n_samples</em><em>, </em><em>n_features</em><em>)</em>) – Training input samples.</p></li>
+<li><p><strong>y_train</strong> (<em>array-like</em><em>, </em><em>shape</em><em> (</em><em>n_samples</em><em>,</em><em>)</em>) – Target values for training.</p></li>
+<li><p><strong>k</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of extreme samples to use for training.</p></li>
+<li><p><strong>thresh_train</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for considering extreme samples during training.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>thresh_train</strong> (<em>float</em>) – The training threshold used.</p></li>
+<li><p><strong>ratio_train</strong> (<em>float</em>) – Ratio of extreme points used for training.</p></li>
+<li><p><strong>X_train_extreme</strong> (<em>array-like, shape (n_extreme_samples, n_features)</em>) – Extreme covariate points used for training.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="supervised.xcovPredictor.xcovPredictor.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_predict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/supervised/xcovPredictor.html#xcovPredictor.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#supervised.xcovPredictor.xcovPredictor.predict" title="Link to this definition">¶</a></dt>
+<dd><p>Predict the target from extreme test covariates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>X_test</strong> (<em>array-like</em><em>, </em><em>shape</em><em> (</em><em>n_samples</em><em>, </em><em>n_features</em><em>)</em>) – Test input samples.</p></li>
+<li><p><strong>thresh_predict</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for selecting extreme points during prediction.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>y_pred_extreme</strong> (<em>array-like, shape (n_extreme_samples,)</em>) – Predicted labels for extreme points.</p></li>
+<li><p><strong>X_test_extreme</strong> (<em>array-like, shape (n_extreme_samples, n_features)</em>) – Extreme points from the test data.</p></li>
+<li><p><strong>mask_test</strong> (<em>array-like, shape (n_samples,)</em>) – Boolean mask indicating extreme points.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">MLExtreme</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="supervised.html">supervised subpackage</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">supervised.xcovPredictor submodule</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor"><code class="docutils literal notranslate"><span class="pre">xcovPredictor</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.task"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.task</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.model"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.model</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.norm_func"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.norm_func</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.thresh_train"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.thresh_train</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.ratio_train"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.ratio_train</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.cross_validate"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.cross_validate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.fit"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.fit()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#supervised.xcovPredictor.xcovPredictor.predict"><code class="docutils literal notranslate"><span class="pre">xcovPredictor.predict()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="supervised.supervised_utils.html">supervised.supervised_utils submodule</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="unsupervised.html">unsupervised subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="utils.html">utils subpackage</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="supervised.html">supervised subpackage</a><ul>
+      <li>Previous: <a href="supervised.html" title="previous chapter">supervised subpackage</a></li>
+      <li>Next: <a href="supervised.supervised_utils.html" title="next chapter">supervised.supervised_utils submodule</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Anne Sabourin, Pierre-Antoine Amiand-Leroy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/supervised.xcovPredictor.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

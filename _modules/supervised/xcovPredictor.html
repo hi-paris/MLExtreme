@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>supervised.xcovPredictor &#8212; MLExtreme 0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=8dde47fa"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for supervised.xcovPredictor</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Author: Anne Sabourin</span>
+<span class="c1"># Date: 2025</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for Supervised Learning with Heavy-Tailed Covariates</span>
+
+<span class="sd">This module supports supervised binary classification and regression tasks with squared error loss, specifically designed for scenarios involving heavy-tailed (regularly varying) covariates.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">hamming_loss</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">mean_squared_error</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">KFold</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+
+
+<div class="viewcode-block" id="xcovPredictor">
+<a class="viewcode-back" href="../../supervised.xcovPredictor.html#supervised.xcovPredictor.xcovPredictor">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">xcovPredictor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A prediction model for extreme value analysis, tailored for classification\</span>
+<span class="sd">    or regression tasks on the tails of the covariate distribution.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    task : str</span>
+<span class="sd">        The type of prediction task, either &#39;regression&#39; or &#39;classification&#39;.</span>
+<span class="sd">    model : object</span>
+<span class="sd">        The model used for prediction, must have `.fit` and `.predict` methods.</span>
+<span class="sd">    norm_func : callable, optional</span>
+<span class="sd">        Function to compute the norm of input data. Defaults to L2 norm.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    task : str</span>
+<span class="sd">        The type of prediction task.</span>
+<span class="sd">    model : object</span>
+<span class="sd">        A deep copy of the model provided during initialization.</span>
+<span class="sd">    norm_func : callable</span>
+<span class="sd">        The norm function used for selecting extremes.</span>
+<span class="sd">    thresh_train : float</span>
+<span class="sd">        Training threshold, set after fitting.</span>
+<span class="sd">    ratio_train : float</span>
+<span class="sd">        Ratio of extreme training samples to total training samples, set after fitting.</span>
+
+<span class="sd">    Methods</span>
+<span class="sd">    -------</span>
+<span class="sd">    fit(X_train, y_train, k=None, thresh_train=None):</span>
+<span class="sd">        Fit the model using extreme points from the training data.</span>
+<span class="sd">    predict(X_test, thresh_predict=None):</span>
+<span class="sd">        Predict the target from extreme test covariates.</span>
+<span class="sd">    cross_validate(X, y, thresh_train=None, thresh_predict=None, cv=5, scoring=None, random_state=None):</span>
+<span class="sd">        Evaluate the generalization risk using cross-validation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">norm_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">task</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;regression&quot;</span><span class="p">,</span> <span class="s2">&quot;classification&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;task must be either &#39;classification&#39; or &#39;regression&#39;&quot;</span><span class="p">)</span>
+        <span class="n">internal_model</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">=</span> <span class="n">task</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">internal_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm_func</span> <span class="o">=</span> <span class="n">norm_func</span> <span class="k">if</span> <span class="n">norm_func</span> <span class="k">else</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ratio_train</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="xcovPredictor.fit">
+<a class="viewcode-back" href="../../supervised.xcovPredictor.html#supervised.xcovPredictor.xcovPredictor.fit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thresh_train</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the model using extreme points from the training data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X_train : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Training input samples.</span>
+<span class="sd">        y_train : array-like, shape (n_samples,)</span>
+<span class="sd">            Target values for training.</span>
+<span class="sd">        k : int, optional</span>
+<span class="sd">            Number of extreme samples to use for training.</span>
+<span class="sd">        thresh_train : float, optional</span>
+<span class="sd">            Threshold for considering extreme samples during training.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        thresh_train : float</span>
+<span class="sd">            The training threshold used.</span>
+<span class="sd">        ratio_train : float</span>
+<span class="sd">            Ratio of extreme points used for training.</span>
+<span class="sd">        X_train_extreme : array-like, shape (n_extreme_samples, n_features)</span>
+<span class="sd">            Extreme covariate points used for training.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_func</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;norm_func must be callable&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">thresh_train</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;k and thresh_train cannot both be set at the same time&quot;</span><span class="p">)</span>
+
+        <span class="n">Norm_X_train</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_func</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">thresh_train</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">thresh_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">Norm_X_train</span><span class="p">,</span>
+                                       <span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Norm_X_train</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">thresh_train</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">thresh_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">Norm_X_train</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">k</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">Norm_X_train</span><span class="p">))</span>
+
+        <span class="n">id_extreme</span> <span class="o">=</span> <span class="n">Norm_X_train</span> <span class="o">&gt;=</span> <span class="n">thresh_train</span>
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">k</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">id_extreme</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span> <span class="o">=</span> <span class="n">thresh_train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ratio_train</span> <span class="o">=</span> <span class="n">k</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">Norm_X_train</span><span class="p">)</span>
+
+        <span class="n">X_train_extreme</span> <span class="o">=</span> <span class="n">X_train</span><span class="p">[</span><span class="n">id_extreme</span><span class="p">]</span>
+        <span class="n">X_train_extreme_unit</span> <span class="o">=</span> <span class="n">X_train_extreme</span> <span class="o">/</span> <span class="n">Norm_X_train</span><span class="p">[</span><span class="n">id_extreme</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">y_train_extreme</span> <span class="o">=</span> <span class="n">y_train</span><span class="p">[</span><span class="n">id_extreme</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_extreme_unit</span><span class="p">,</span> <span class="n">y_train_extreme</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">thresh_train</span><span class="p">,</span> <span class="n">k</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">Norm_X_train</span><span class="p">),</span> <span class="n">X_train_extreme</span></div>
+
+
+<div class="viewcode-block" id="xcovPredictor.predict">
+<a class="viewcode-back" href="../../supervised.xcovPredictor.html#supervised.xcovPredictor.xcovPredictor.predict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">thresh_predict</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict the target from extreme test covariates.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X_test : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Test input samples.</span>
+<span class="sd">        thresh_predict : float, optional</span>
+<span class="sd">            Threshold for selecting extreme points during prediction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        y_pred_extreme : array-like, shape (n_extreme_samples,)</span>
+<span class="sd">            Predicted labels for extreme points.</span>
+<span class="sd">        X_test_extreme : array-like, shape (n_extreme_samples, n_features)</span>
+<span class="sd">            Extreme points from the test data.</span>
+<span class="sd">        mask_test : array-like, shape (n_samples,)</span>
+<span class="sd">            Boolean mask indicating extreme points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Model has not been fitted yet.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">thresh_predict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">thresh_predict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span>
+
+        <span class="n">Norm_X_test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_func</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+        <span class="n">mask_test</span> <span class="o">=</span> <span class="n">Norm_X_test</span> <span class="o">&gt;=</span> <span class="n">thresh_predict</span>
+        <span class="n">X_test_extreme</span> <span class="o">=</span> <span class="n">X_test</span><span class="p">[</span><span class="n">mask_test</span><span class="p">]</span>
+
+        <span class="n">X_test_extreme_unit</span> <span class="o">=</span> <span class="n">X_test_extreme</span> <span class="o">/</span> <span class="n">Norm_X_test</span><span class="p">[</span><span class="n">mask_test</span><span class="p">][:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span>
+        <span class="n">y_pred_extreme</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test_extreme_unit</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">y_pred_extreme</span><span class="p">,</span> <span class="n">X_test_extreme</span><span class="p">,</span> <span class="n">mask_test</span></div>
+
+
+<div class="viewcode-block" id="xcovPredictor.cross_validate">
+<a class="viewcode-back" href="../../supervised.xcovPredictor.html#supervised.xcovPredictor.xcovPredictor.cross_validate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">cross_validate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">X</span><span class="p">,</span>
+        <span class="n">y</span><span class="p">,</span>
+        <span class="n">thresh_train</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">thresh_predict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">cv</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">scoring</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform cross-validation and return the mean score, standard deviation, and scores.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : array-like, shape (n_samples, n_features)</span>
+<span class="sd">            Input samples.</span>
+<span class="sd">        y : array-like, shape (n_samples,)</span>
+<span class="sd">            Target values.</span>
+<span class="sd">        thresh_train : float, optional</span>
+<span class="sd">            Threshold for extreme values during training.</span>
+<span class="sd">        thresh_predict : float, optional</span>
+<span class="sd">            Threshold for extreme values during prediction.</span>
+<span class="sd">        cv : int, optional</span>
+<span class="sd">            Number of folds for cross-validation. Default is 5.</span>
+<span class="sd">        scoring : callable, optional</span>
+<span class="sd">            Scoring function to evaluate predictions.</span>
+<span class="sd">        random_state : int, optional</span>
+<span class="sd">            Seed for random number generation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        mean_score : float</span>
+<span class="sd">            Mean score from cross-validation.</span>
+<span class="sd">        std_err_mean : float</span>
+<span class="sd">            Estimated standard deviation of the mean score.</span>
+<span class="sd">        scores : list of float</span>
+<span class="sd">            Scores from each fold of the cross-validation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_func</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;norm_func must be callable&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">scoring</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">scoring</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">hamming_loss</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">task</span> <span class="o">==</span> <span class="s2">&quot;classification&quot;</span> <span class="k">else</span> <span class="n">mean_squared_error</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">callable</span><span class="p">(</span><span class="n">scoring</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;scoring must be callable or None&quot;</span><span class="p">)</span>
+
+        <span class="n">Norm_X</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_func</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">thresh_train</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">thresh_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">Norm_X</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">Norm_X</span><span class="p">))))</span>
+
+        <span class="k">if</span> <span class="n">thresh_predict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">thresh_predict</span> <span class="o">=</span> <span class="n">thresh_train</span>
+
+        <span class="n">id_extreme_train</span> <span class="o">=</span> <span class="n">Norm_X</span> <span class="o">&gt;=</span> <span class="n">thresh_train</span>
+        <span class="n">id_extreme_predict</span> <span class="o">=</span> <span class="n">Norm_X</span> <span class="o">&gt;=</span> <span class="n">thresh_predict</span>
+
+        <span class="n">kf</span> <span class="o">=</span> <span class="n">KFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">train_index</span><span class="p">,</span> <span class="n">test_index</span> <span class="ow">in</span> <span class="n">kf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">X</span><span class="p">):</span>
+            <span class="n">size_train_ex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">id_extreme_train</span><span class="p">[</span><span class="n">train_index</span><span class="p">])</span>
+            <span class="n">size_predict_ex</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">id_extreme_predict</span><span class="p">[</span><span class="n">test_index</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">size_train_ex</span> <span class="o">&lt;=</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">size_predict_ex</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">X_train</span><span class="p">,</span> <span class="n">X_test</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="n">train_index</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="n">test_index</span><span class="p">]</span>
+            <span class="n">y_train</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">train_index</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="n">test_index</span><span class="p">]</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thresh_train</span><span class="o">=</span><span class="n">thresh_train</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">ratio_train</span> <span class="o">=</span> <span class="n">size_train_ex</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_index</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Warning: An error occurred for extreme ratio (training) = </span><span class="si">{</span><span class="n">ratio_train</span><span class="si">:</span><span class="s2">4f</span><span class="si">}</span><span class="s2">. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">y_pred_extreme</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">mask_test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+                <span class="n">X_test</span><span class="p">,</span> <span class="n">thresh_predict</span><span class="o">=</span><span class="n">thresh_predict</span>
+            <span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">scoring</span><span class="p">(</span><span class="n">y_test</span><span class="p">[</span><span class="n">mask_test</span><span class="p">],</span> <span class="n">y_pred_extreme</span><span class="p">)</span>
+            <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="n">mean_size_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">id_extreme_train</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">cv</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">cv</span>
+        <span class="n">mean_size_predict</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">id_extreme_predict</span><span class="p">)</span> <span class="o">/</span> <span class="n">cv</span>
+        <span class="n">order_error</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_size_predict</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_size_train</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">scores</span><span class="p">),</span> <span class="n">order_error</span><span class="p">,</span> <span class="n">scores</span></div>
+</div>
+
+
+
+<span class="c1"># import numpy as np</span>
+<span class="c1"># from sklearn.metrics import hamming_loss</span>
+<span class="c1"># from sklearn.metrics import mean_squared_error</span>
+<span class="c1"># from sklearn.model_selection import KFold</span>
+<span class="c1"># from copy import deepcopy</span>
+
+
+<span class="c1"># class xcovPredictor:</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     A prediction model (either classification or regression)</span>
+<span class="c1">#      designed specifically for making predictions on the tails of the</span>
+<span class="c1">#      covariate distribution.</span>
+
+<span class="c1">#      Parameters</span>
+<span class="c1">#     ----------</span>
+
+<span class="c1">#     task: str The type of prediction task</span>
+<span class="c1">#      envisioned.  Must be either &#39;prediction&#39; or &#39;classification&#39;.</span>
+
+<span class="c1">#     model : object The model to be used for prediction. Must have a</span>
+<span class="c1">#         `.fit` method and a `.predict&#39; method.</span>
+
+<span class="c1">#     norm_func : callable, optional A function that computes a norm of</span>
+<span class="c1">#         the input data. Default is L2 norm.</span>
+
+
+<span class="c1">#     Attributes</span>
+<span class="c1">#     ----------</span>
+
+<span class="c1">#     task : str The type of prediction task</span>
+<span class="c1">#     envisioned.  Either &#39;prediction&#39; or &#39;classification&#39;.</span>
+
+<span class="c1">#     model : object The model used for prediction.  It is a</span>
+<span class="c1">#         `copy.deepcopy` copy of the argument passed to the contructor.</span>
+
+<span class="c1">#     norm_func : callable The norm function used at training and</span>
+<span class="c1">#         testing for selecting extremes.</span>
+
+<span class="c1">#     thresh_train: float.  Set to None at initialization and later set</span>
+<span class="c1">#         to the training threshold after fitting.</span>
+
+<span class="c1">#      ratio_train: float, between 0 and 1 Set to None at initialization</span>
+<span class="c1">#         and later set to the ratio k/n of extreme training sample</span>
+<span class="c1">#         divided by the training sample size.</span>
+
+<span class="c1">#     Methods</span>
+<span class="c1">#     _________</span>
+
+<span class="c1">#     .fit : fit the self.model object using the angle</span>
+<span class="c1">#     of largest covariates and their associated targets</span>
+
+<span class="c1">#     .predict : predicts the target based on new (extreme) covariates</span>
+
+<span class="c1">#     .cross_validate : evaluates the generalization risk based on</span>
+<span class="c1">#     cross-validation.&quot;&quot;&quot;</span>
+
+<span class="c1">#     def __init__(self, task, model, norm_func=None):</span>
+<span class="c1">#         if task != &quot;regression&quot; and task != &quot;classification&quot;:</span>
+<span class="c1">#             raise ValueError(&quot;task must be either &#39;classification&#39; or &#39;regression&#39;&quot;)</span>
+<span class="c1">#         internal_model = deepcopy(model)</span>
+<span class="c1">#         self.task = task</span>
+<span class="c1">#         self.model = internal_model</span>
+<span class="c1">#         self.norm_func = norm_func if norm_func else lambda x: np.linalg.norm(x, axis=1)</span>
+<span class="c1">#         self.thresh_train = None</span>
+<span class="c1">#         self.ratio_train = None</span>
+
+<span class="c1">#     def fit(self, X_train, y_train, k=None, thresh_train=None):</span>
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         Fit the model using extreme points from the training data where</span>
+<span class="c1">#         the covariate norm exceeds a high threshold.</span>
+
+<span class="c1">#         Parameters</span>
+<span class="c1">#         ----------</span>
+<span class="c1">#         X_train : array-like of shape (n_samples, n_features)</span>
+<span class="c1">#             The training input samples.</span>
+
+<span class="c1">#         y_train : array-like of shape (n_samples,)</span>
+<span class="c1">#             The target values for training.</span>
+
+<span class="c1">#         k : int, optional</span>
+<span class="c1">#             The number of extreme samples used to train the model. Data are</span>
+<span class="c1">#             ordered according to their norm (`norm_func&#39;) and the k largest are</span>
+<span class="c1">#             selected.</span>
+
+<span class="c1">#         thresh_train:  float, optional.</span>
+<span class="c1">#             The radial threshold above which training samples are considered</span>
+<span class="c1">#             extreme for training</span>
+
+<span class="c1">#         Details</span>
+<span class="c1">#         ------</span>
+
+<span class="c1">#         If `thresh_train=None` and `k=None`, `k` is set to sqrt(n_samples)</span>
+<span class="c1">#           and thresh_train is set to the empirical 1 - k/n_samples quantile of</span>
+<span class="c1">#           the norms of the input X_train</span>
+
+<span class="c1">#         Setting both thresh_train and k at the same time raises an error.</span>
+
+<span class="c1">#         Returns</span>
+<span class="c1">#         -------</span>
+<span class="c1">#         thresh_train : float</span>
+<span class="c1">#             The default threshold for further prediction,</span>
+<span class="c1">#             set to the training threshold. Also stored in model&#39;s</span>
+<span class="c1">#             attribute .thresh_train</span>
+
+<span class="c1">#         ratio_train: float</span>
+<span class="c1">#             The ratio of extreme points used for training.</span>
+<span class="c1">#             Also stored in model&#39;s attribute .ratio_train</span>
+
+<span class="c1">#         X_train : array-like of shape (n_extreme_samples, n_features)</span>
+<span class="c1">#             The  extreme covariate points actually  used to train the model.</span>
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         if not callable(self.norm_func):</span>
+<span class="c1">#             raise ValueError(&quot;norm_func must be callable&quot;)</span>
+
+<span class="c1">#         # check and set k and thresh_train</span>
+<span class="c1">#         if k is not None and thresh_train is not None:</span>
+<span class="c1">#             raise ValueError(&quot;k and thresh_train cannot both be set at the same time&quot;)</span>
+
+<span class="c1">#         Norm_X_train = self.norm_func(X_train)</span>
+
+<span class="c1">#         if k is None and thresh_train is None:</span>
+<span class="c1">#             thresh_train = np.quantile(Norm_X_train, 1 - 1 / np.sqrt(len(Norm_X_train)))</span>
+<span class="c1">#         if thresh_train is None:  ## then k is not none</span>
+<span class="c1">#             thresh_train = np.quantile(Norm_X_train, 1 - k / len(Norm_X_train))</span>
+
+<span class="c1">#         id_extreme = Norm_X_train &gt;= thresh_train</span>
+<span class="c1">#         if k is None:</span>
+<span class="c1">#             k = np.sum(id_extreme)</span>
+<span class="c1">#         # update model with training threshold and k/n ratio</span>
+<span class="c1">#         self.thresh_train = thresh_train</span>
+<span class="c1">#         self.ratio_train = k / len(Norm_X_train)</span>
+
+<span class="c1">#         X_train_extreme = X_train[id_extreme]</span>
+<span class="c1">#         X_train_extreme_unit = X_train_extreme / Norm_X_train[id_extreme][:, np.newaxis]</span>
+<span class="c1">#         y_train_extreme = y_train[id_extreme]</span>
+
+<span class="c1">#         self.model.fit(X_train_extreme_unit, y_train_extreme)</span>
+
+<span class="c1">#         return thresh_train, k / len(Norm_X_train), X_train_extreme</span>
+
+<span class="c1">#     def predict(self, X_test, thresh_predict=None):</span>
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         Predict the target from  extreme test covariates.</span>
+
+<span class="c1">#         Parameters</span>
+<span class="c1">#         ----------</span>
+<span class="c1">#         X_test : array-like of shape (n_samples, n_features)</span>
+<span class="c1">#             The test input (covariate) samples.</span>
+
+<span class="c1">#         thresh_predict : float, optional</span>
+<span class="c1">#             The threshold value to select extreme points. If not provided,</span>
+<span class="c1">#             the threshold used during fitting will be used by default.</span>
+
+
+<span class="c1">#         Returns</span>
+<span class="c1">#         -------</span>
+<span class="c1">#         y_pred : array-like of shape (n_extreme_samples,)</span>
+<span class="c1">#             The predicted labels for the extreme points.</span>
+
+<span class="c1">#         X_test : array-like of shape (n_extreme_samples, n_features)</span>
+<span class="c1">#             The  extreme points from the test data.</span>
+
+<span class="c1">#         mask_test : array-like of shape (n_samples,)</span>
+<span class="c1">#             A boolean mask indicating which points are extreme.</span>
+
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         if self.thresh_train is None:</span>
+<span class="c1">#             raise ValueError(&quot;Model has not been fitted yet.&quot;)</span>
+
+<span class="c1">#         if thresh_predict is None:</span>
+<span class="c1">#             thresh_predict = self.thresh_train</span>
+
+<span class="c1">#         Norm_X_test = self.norm_func(X_test)</span>
+<span class="c1">#         mask_test = Norm_X_test &gt;= thresh_predict</span>
+<span class="c1">#         X_test_extreme = X_test[mask_test]</span>
+
+<span class="c1">#         X_test_extreme_unit = X_test_extreme / Norm_X_test[mask_test][:, np.newaxis]</span>
+<span class="c1">#         y_pred_extreme = self.model.predict(X_test_extreme_unit)</span>
+
+<span class="c1">#         return y_pred_extreme, X_test_extreme, mask_test</span>
+
+<span class="c1">#     def cross_validate(</span>
+<span class="c1">#         self,</span>
+<span class="c1">#         X,</span>
+<span class="c1">#         y,</span>
+<span class="c1">#         thresh_train=None,</span>
+<span class="c1">#         thresh_predict=None,</span>
+<span class="c1">#         cv=5,</span>
+<span class="c1">#         scoring=None,</span>
+<span class="c1">#         random_state=None,</span>
+<span class="c1">#     ):</span>
+<span class="c1">#         &quot;&quot;&quot;Perform cross-validation and return the mean score</span>
+<span class="c1">#         (defined by the scoring function), the estimated standard</span>
+<span class="c1">#         deviation of the mean, and the array of scores.</span>
+
+<span class="c1">#         Follows mostly Aghbalou et al&#39;s CV scheme (K-fold), see [1]</span>
+<span class="c1">#         below.  Differently from the paper the radial threshold for</span>
+<span class="c1">#         prediction/test may be chosen different from the radial</span>
+<span class="c1">#         threshold for training.</span>
+
+<span class="c1">#         Parameters</span>
+<span class="c1">#         ----------</span>
+<span class="c1">#         X : array-like of shape (n_samples, n_features)</span>
+<span class="c1">#             The input samples.</span>
+
+<span class="c1">#         y : array-like of shape (n_samples,)</span>
+<span class="c1">#             The target values.</span>
+
+<span class="c1">#         thresh_train : float, optional</span>
+<span class="c1">#             The threshold for considering extreme values during training.</span>
+<span class="c1">#             By default, set to the 1- 1/sqrt(n) quantile of the covariates norms.</span>
+
+<span class="c1">#         thresh_predict : float, optional</span>
+<span class="c1">#             The threshold for considering extreme values during prediction.</span>
+<span class="c1">#             By default, set to thresh_train</span>
+<span class="c1">#         cv : int, optional</span>
+<span class="c1">#             The number of folds for cross-validation. Default is 5.</span>
+
+<span class="c1">#         scoring : callable, optional</span>
+<span class="c1">#             The scoring function to evaluate predictions.</span>
+<span class="c1">#             Default is `hamming_loss` (i.e. 0-1 loss) for classification tasks</span>
+<span class="c1">#             and `mean_squared_error` for regression tasks.</span>
+
+<span class="c1">#         random_state : int, optional</span>
+<span class="c1">#             Seed for the random number generator for shuffling the data.</span>
+
+<span class="c1">#         Returns</span>
+<span class="c1">#         -------</span>
+<span class="c1">#         mean_score : float</span>
+<span class="c1">#             The mean score from cross-validation.</span>
+
+<span class="c1">#         std_err_mean : float</span>
+<span class="c1">#             The estimated standard deviation of the mean score.</span>
+
+<span class="c1">#         scores : list of float</span>
+<span class="c1">#             The scores from each fold of the cross-validation.</span>
+
+<span class="c1">#         Details</span>
+<span class="c1">#         ---------</span>
+<span class="c1">#         see:</span>
+
+<span class="c1">#         [1] Aghbalou, A., Bertail, P., Portier, F., &amp; Sabourin, A. (2024).</span>
+<span class="c1">#         Cross-validation on extreme regions. Extremes, 27(4), 505-555.</span>
+
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         scores = []</span>
+<span class="c1">#         # begin as in the fit method</span>
+<span class="c1">#         if not callable(self.norm_func):</span>
+<span class="c1">#             raise ValueError(&quot;norm_func must be callable&quot;)</span>
+
+<span class="c1">#         # check scoring function</span>
+<span class="c1">#         if scoring is None:</span>
+<span class="c1">#             if self.task == &quot;classification&quot;:</span>
+<span class="c1">#                 scoring = hamming_loss</span>
+<span class="c1">#             if self.task == &quot;regression&quot;:</span>
+<span class="c1">#                 scoring = mean_squared_error</span>
+
+<span class="c1">#         if not callable(scoring):</span>
+<span class="c1">#             raise ValueError(&quot;scoring must be callable or None&quot;)</span>
+
+<span class="c1">#         # check and set thresh_train, as in fit method:</span>
+<span class="c1">#         # Doing so outside the fit method permits to</span>
+<span class="c1">#         # discard folds where there are too few extremes in the training and</span>
+<span class="c1">#         # validation set, without fitting the model first and</span>
+<span class="c1">#         # thus saving computational time.</span>
+<span class="c1">#         Norm_X = self.norm_func(X)</span>
+
+<span class="c1">#         if thresh_train is None:</span>
+<span class="c1">#             thresh_train = np.quantile(Norm_X, (1 - 1 / np.sqrt(len(Norm_X))))</span>
+
+<span class="c1">#         # id_extreme = Norm_X &gt;= thresh_train</span>
+<span class="c1">#         # k = np.sum(id_extreme)</span>
+
+<span class="c1">#         if thresh_predict is None:</span>
+<span class="c1">#             thresh_predict = thresh_train</span>
+
+<span class="c1">#         # which data are considered extreme for training and testing:</span>
+<span class="c1">#         # logical mask vectors of size len(y)</span>
+<span class="c1">#         id_extreme_train = Norm_X &gt;= thresh_train</span>
+<span class="c1">#         id_extreme_predict = Norm_X &gt;= thresh_predict</span>
+
+<span class="c1">#         # K-fold train/test indices</span>
+<span class="c1">#         kf = KFold(n_splits=cv, shuffle=True, random_state=random_state)</span>
+<span class="c1">#         # CV loop</span>
+<span class="c1">#         for train_index, test_index in kf.split(X):</span>
+<span class="c1">#             size_train_ex = np.sum(id_extreme_train[train_index])</span>
+<span class="c1">#             size_predict_ex = np.sum(id_extreme_predict[test_index])</span>
+<span class="c1">#             if size_train_ex &lt;= 2 or size_predict_ex &lt;= 0:</span>
+<span class="c1">#                 continue</span>
+<span class="c1">#             # Split the data into training and testing sets</span>
+<span class="c1">#             X_train, X_test = X[train_index], X[test_index]</span>
+<span class="c1">#             y_train, y_test = y[train_index], y[test_index]</span>
+
+<span class="c1">#             # Fit the model on the training data</span>
+<span class="c1">#             try:</span>
+<span class="c1">#                 self.fit(X_train, y_train, k=None, thresh_train=thresh_train)</span>
+
+<span class="c1">#             except Exception as e:</span>
+<span class="c1">#                 ratio_train = size_train_ex / len(train_index)</span>
+<span class="c1">#                 print(</span>
+<span class="c1">#                     f&quot;Warning: An error occurred for \</span>
+<span class="c1">#                 extreme ratio (training) = {ratio_train:4f}. Error: {e}&quot;</span>
+<span class="c1">#                 )</span>
+<span class="c1">#                 continue</span>
+<span class="c1">#             # Predict on the testing data</span>
+<span class="c1">#             y_pred_extreme, _, mask_test = self.predict(</span>
+<span class="c1">#                 X_test, thresh_predict=thresh_predict</span>
+<span class="c1">#             )</span>
+
+<span class="c1">#             # Calculate the score</span>
+<span class="c1">#             result = scoring(y_test[mask_test], y_pred_extreme)</span>
+<span class="c1">#             scores.append(result)</span>
+<span class="c1">#         # compute order of magnitude of the error following aghbalou&#39;s results</span>
+<span class="c1">#         # using max(thresh_predict,thresh_train) as a conservative threshold</span>
+
+<span class="c1">#         mean_size_train = np.sum(id_extreme_train) * (cv - 1) / cv</span>
+<span class="c1">#         mean_size_predict = np.sum(id_extreme_predict) / cv</span>
+<span class="c1">#         #        min_size = np.minimum(mean_size_predict, mean_size_train)</span>
+<span class="c1">#         order_error = 1 / np.sqrt(mean_size_predict) + 1 / np.sqrt(mean_size_train)</span>
+<span class="c1">#         #        return np.mean(scores), np.std(scores)/np.sqrt(len(scores)), scores</span>
+<span class="c1">#         return np.mean(scores), order_error, scores</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">MLExtreme</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../supervised.html">supervised subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../unsupervised.html">unsupervised subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../utils.html">utils subpackage</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Anne Sabourin, Pierre-Antoine Amiand-Leroy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
