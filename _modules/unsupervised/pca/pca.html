@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>unsupervised.pca.pca &#8212; MLExtreme 0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=8dde47fa"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for unsupervised.pca.pca</h1><div class="highlight"><pre>
+<span></span><span class="c1"># File: pca.py</span>
+<span class="c1"># Author: Anne Sabourin</span>
+<span class="c1"># Date: 2025</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module implementing PCA for extremes</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">svd</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+
+<div class="viewcode-block" id="Xpca">
+<a class="viewcode-back" href="../../../unsupervised.pca.html#unsupervised.pca.pca.Xpca">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Xpca</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class for performing Principal Component Analysis (PCA) on extreme points of a dataset.</span>
+
+<span class="sd">    This class provides methods to fit the PCA model to training data, compute scores for test data,</span>
+<span class="sd">    predict the projection of test data onto the principal axes, generate scree plots, and calculate</span>
+<span class="sd">    reconstruction errors.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    thresh_train : float, optional</span>
+<span class="sd">        Threshold for identifying extreme points during training.</span>
+<span class="sd">    thresh_predict : float, optional</span>
+<span class="sd">        Threshold for identifying extreme points during prediction.</span>
+<span class="sd">    beta : float, default=1</span>
+<span class="sd">        Scaling factor for rescaling extreme points.</span>
+<span class="sd">    centered : bool, default=False</span>
+<span class="sd">        Whether to center the data by subtracting the mean angle.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">    -----------</span>
+<span class="sd">    thresh_train : float</span>
+<span class="sd">        Threshold for identifying extreme points during training.</span>
+<span class="sd">    thresh_predict : float</span>
+<span class="sd">        Threshold for identifying extreme points during prediction.</span>
+<span class="sd">    beta : float</span>
+<span class="sd">        Scaling factor for rescaling extreme points.</span>
+<span class="sd">    centered : bool</span>
+<span class="sd">        Whether to center the data by subtracting the mean angle.</span>
+<span class="sd">    mean_angle : array-like</span>
+<span class="sd">        Mean angle of the extreme points.</span>
+<span class="sd">    principal_comp : array-like</span>
+<span class="sd">        Principal components of the extreme points.</span>
+<span class="sd">    principal_axes : array-like</span>
+<span class="sd">        Principal axes of the extreme points.</span>
+<span class="sd">    eigenvalues : array-like</span>
+<span class="sd">        Eigenvalues of the extreme points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">thresh_train</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">thresh_predict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">beta</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">centered</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span> <span class="o">=</span> <span class="n">thresh_train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thresh_predict</span> <span class="o">=</span> <span class="n">thresh_predict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">centered</span> <span class="o">=</span> <span class="n">centered</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="n">beta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_angle</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">principal_comp</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eigenvalues</span> <span class="o">=</span> <span class="kc">None</span>
+      
+<div class="viewcode-block" id="Xpca.fit">
+<a class="viewcode-back" href="../../../unsupervised.pca.html#unsupervised.pca.pca.Xpca.fit">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">max_dim</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform PCA by computing the singular value decomposition of the rescaled extreme points on the training dataset X.</span>
+
+<span class="sd">        Each extreme point `x` is rescaled by the factor ||x||^{-beta}. The default value for beta is 1.</span>
+<span class="sd">        Admissible values are in the interval (1 - alpha/2, 1], where alpha is the regular variation index of the input X.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        X : array-like</span>
+<span class="sd">            Training data.</span>
+<span class="sd">        max_dim : int, optional</span>
+<span class="sd">            Maximum number of dimensions to consider for PCA.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Xt</span> <span class="o">=</span> <span class="n">X</span>
+        <span class="n">R_squared</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Xt</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">norm_Xt</span> <span class="o">=</span> <span class="n">R_squared</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># Set the training threshold if not provided</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">norm_Xt</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">norm_Xt</span><span class="p">)))</span>
+
+        <span class="c1"># set max_dim to ambient dimension if not provided</span>
+        <span class="k">if</span> <span class="n">max_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">max_dim</span> <span class="o">=</span> <span class="n">Xt</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># define extreme samples</span>
+        <span class="n">is_extreme</span> <span class="o">=</span> <span class="n">norm_Xt</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span>
+        <span class="n">X_ext</span> <span class="o">=</span> <span class="n">Xt</span><span class="p">[</span><span class="n">is_extreme</span><span class="p">]</span>
+        <span class="c1"># Update total mass accordingly</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">number_extremes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">X_ext</span><span class="p">)</span>
+        <span class="n">R_ext</span> <span class="o">=</span> <span class="n">norm_Xt</span><span class="p">[</span><span class="n">is_extreme</span><span class="p">]</span>
+        <span class="n">ang_ext</span> <span class="o">=</span> <span class="n">X_ext</span> <span class="o">/</span> <span class="p">(</span><span class="n">R_ext</span> <span class="o">**</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">centered</span><span class="p">:</span>
+            <span class="n">center</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">ang_ext</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_angle</span> <span class="o">=</span> <span class="n">center</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">ang_ext</span> <span class="o">-</span> <span class="n">center</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Z</span> <span class="o">=</span> <span class="n">ang_ext</span>
+        <span class="n">U</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">Vh</span> <span class="o">=</span> <span class="n">svd</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">full_matrices</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">principal_comp</span> <span class="o">=</span> <span class="n">U</span><span class="p">[:,</span> <span class="p">:</span><span class="n">max_dim</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span> <span class="o">=</span> <span class="p">(</span><span class="n">Vh</span><span class="o">.</span><span class="n">transpose</span><span class="p">())[:,</span> <span class="p">:</span><span class="n">max_dim</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eigenvalues</span> <span class="o">=</span> <span class="n">s</span><span class="p">[:</span><span class="n">max_dim</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span></div>
+
+
+<div class="viewcode-block" id="Xpca.scores">
+<a class="viewcode-back" href="../../../unsupervised.pca.html#unsupervised.pca.pca.Xpca.scores">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">scores</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xtest</span><span class="p">,</span> <span class="n">max_dim</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the scores, i.e., the coordinates of the points in the array Xtest,</span>
+<span class="sd">        in the coordinate system given by the principal axes of the extreme points</span>
+<span class="sd">        (with norm greater than self.thresh_predict) rescaled through the mapping</span>
+<span class="sd">        x --&gt; ||x||^{-beta} * x where beta = self.beta. The model must have been fit beforehand.</span>
+<span class="sd">        If `Xtest` is the training data, this gives the usual PCA scores of the rescaled extreme data.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        Xtest : array-like</span>
+<span class="sd">            Test data.</span>
+<span class="sd">        max_dim : int, optional</span>
+<span class="sd">            Maximum number of dimensions to consider for scores.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">        coords_in_pr_axes : array-like</span>
+<span class="sd">            Coordinates in the principal axes.</span>
+<span class="sd">        X_ext : array-like</span>
+<span class="sd">            Extreme points in the test data.</span>
+<span class="sd">        mask : array-like</span>
+<span class="sd">            Boolean mask indicating extreme points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The model has not been fitted&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">max_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">max_dim</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_predict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">thresh_predict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_train</span>
+
+        <span class="n">Xt</span> <span class="o">=</span> <span class="n">Xtest</span>
+        <span class="n">norm_Xt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">Xt</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="c1"># define extreme samples</span>
+        <span class="n">is_extreme</span> <span class="o">=</span> <span class="n">norm_Xt</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">thresh_predict</span>
+        <span class="n">X_ext</span> <span class="o">=</span> <span class="n">Xt</span><span class="p">[</span><span class="n">is_extreme</span><span class="p">]</span>
+        <span class="n">R_ext</span> <span class="o">=</span> <span class="n">norm_Xt</span><span class="p">[</span><span class="n">is_extreme</span><span class="p">]</span>
+        <span class="n">ang_ext</span> <span class="o">=</span> <span class="n">X_ext</span> <span class="o">/</span> <span class="p">(</span><span class="n">R_ext</span> <span class="o">**</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">centered</span><span class="p">:</span>
+            <span class="n">Zang</span> <span class="o">=</span> <span class="n">ang_ext</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Zang</span> <span class="o">=</span> <span class="n">ang_ext</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_angle</span>
+        <span class="n">coords_in_pr_axes</span> <span class="o">=</span> <span class="n">Zang</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span><span class="p">[:,</span> <span class="p">:</span><span class="n">p</span><span class="p">]</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">is_extreme</span>
+        <span class="k">return</span> <span class="n">coords_in_pr_axes</span><span class="p">,</span> <span class="n">X_ext</span><span class="p">,</span> <span class="n">mask</span></div>
+
+
+<div class="viewcode-block" id="Xpca.predict">
+<a class="viewcode-back" href="../../../unsupervised.pca.html#unsupervised.pca.pca.Xpca.predict">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">max_dim</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Project X_test onto the principal axes.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        X_test : array-like</span>
+<span class="sd">            Test data.</span>
+<span class="sd">        max_dim : int, optional</span>
+<span class="sd">            Maximum number of dimensions to consider for prediction.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">        recons_X : array-like</span>
+<span class="sd">            Reconstructed data.</span>
+<span class="sd">        X_ext : array-like</span>
+<span class="sd">            Extreme points in the test data.</span>
+<span class="sd">        mask : array-like</span>
+<span class="sd">            Boolean mask indicating extreme points.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The model has not been fitted&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">max_dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">max_dim</span>
+        <span class="n">Scores</span><span class="p">,</span> <span class="n">X_ext</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">)</span>
+        <span class="n">recons_angle_intermediate</span> <span class="o">=</span> <span class="n">Scores</span> <span class="o">@</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span><span class="p">[:,</span> <span class="p">:</span><span class="n">p</span><span class="p">])</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">centered</span><span class="p">:</span>
+            <span class="n">recons_angle</span> <span class="o">=</span> <span class="n">recons_angle_intermediate</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_angle</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">recons_angle</span> <span class="o">=</span> <span class="n">recons_angle_intermediate</span>
+        <span class="n">R_ext</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">X_ext</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">recons_X</span> <span class="o">=</span> <span class="n">recons_angle</span> <span class="o">*</span> <span class="p">(</span><span class="n">R_ext</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">recons_X</span><span class="p">,</span> <span class="n">X_ext</span><span class="p">,</span> <span class="n">mask</span></div>
+
+
+<div class="viewcode-block" id="Xpca.screeplot">
+<a class="viewcode-back" href="../../../unsupervised.pca.html#unsupervised.pca.pca.Xpca.screeplot">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">screeplot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generate a scree plot of the eigenvalues.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">        -------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the model has not been fitted.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">principal_axes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The model has not been fitted&quot;</span><span class="p">)</span>
+        <span class="n">eigenvals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eigenvalues</span>
+        <span class="c1"># Create the scree plot</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">eigenvals</span><span class="p">,</span> <span class="s2">&quot;bo-&quot;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Eigenvalues&quot;</span><span class="p">)</span>
+        <span class="c1"># Add labels and title</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Principal Component Index&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Eigenvalue&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Scree Plot&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Xpca.recons_error">
+<a class="viewcode-back" href="../../../unsupervised.pca.html#unsupervised.pca.pca.Xpca.recons_error">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">recons_error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X_test</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">,</span> <span class="n">test_beta</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the reconstruction error for the test data.</span>
+
+<span class="sd">        The test data are rescaled to ensure existence of second moments, namely each test data is transformed following</span>
+<span class="sd">        z = ||xtest||^{-beta} xtest, where beta &lt;= 1 is given by the argument `test_beta`.</span>
+<span class="sd">        Default is `test_beta=None`, in which case `test_beta` is set to the training value self.beta which defaults to 1.</span>
+
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        X_test : array-like</span>
+<span class="sd">            Test data.</span>
+<span class="sd">        max_dim : int</span>
+<span class="sd">            Maximum number of dimensions to consider for reconstruction.</span>
+<span class="sd">        test_beta : float, optional</span>
+<span class="sd">            Scaling factor for rescaling test data.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">        --------</span>
+<span class="sd">        Err : array-like</span>
+<span class="sd">            Reconstruction error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">test_beta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beta</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="n">test_beta</span>
+        <span class="n">recons_X</span><span class="p">,</span> <span class="n">X_ext</span><span class="p">,</span> <span class="n">mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">max_dim</span><span class="p">)</span>
+
+        <span class="n">X_ext_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">X_ext</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">X_ext</span> <span class="o">/</span> <span class="p">(</span><span class="n">X_ext_norm</span><span class="o">**</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">recons_Z</span> <span class="o">=</span> <span class="n">recons_X</span> <span class="o">/</span> <span class="p">(</span><span class="n">X_ext_norm</span><span class="o">**</span><span class="n">beta</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">Err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="n">Z</span> <span class="o">-</span> <span class="n">recons_Z</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Err</span></div>
+</div>
+
+
+
+<span class="c1"># &quot;&quot;&quot;</span>
+<span class="c1"># File: pca.py</span>
+<span class="c1"># Author: Anne Sabourin</span>
+<span class="c1"># Date: 2025-05-04</span>
+<span class="c1"># &quot;&quot;&quot;</span>
+
+<span class="c1"># import numpy as np</span>
+<span class="c1"># from scipy.linalg import svd</span>
+
+<span class="c1"># # from math import isclose</span>
+<span class="c1"># import matplotlib.pyplot as plt</span>
+<span class="c1"># # from copy import deepcopy</span>
+<span class="c1"># # from ...utils.EVT_basics import rank_transform, round_signif</span>
+
+
+<span class="c1"># class Xpca:</span>
+<span class="c1">#     def __init__(self, thresh_train=None, thresh_predict=None, beta=1, centered=False):</span>
+<span class="c1">#         self.thresh_train = thresh_train</span>
+<span class="c1">#         self.thresh_predict = thresh_predict</span>
+<span class="c1">#         self.centered = centered</span>
+<span class="c1">#         self.beta = beta</span>
+<span class="c1">#         self.mean_angle = None</span>
+<span class="c1">#         self.principal_comp = None</span>
+<span class="c1">#         self.principal_axes = None</span>
+<span class="c1">#         self.eigenvalues = None</span>
+
+<span class="c1">#     def fit(self, X, max_dim=None):</span>
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         Performs PCA by computing the singular value decomposition</span>
+<span class="c1">#         of the rescaled extreme points on the training dataset X,</span>
+<span class="c1">#         where each extreme point `x` is rescaled by the factor</span>
+<span class="c1">#         || x ||^{-beta}. Default value for beta is</span>
+<span class="c1">#         1. Admissible values are the interval  (1- alpha/2, 1]</span>
+<span class="c1">#         where alpha  is the regular variation index of the input</span>
+<span class="c1">#         X.</span>
+
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         Xt = X</span>
+<span class="c1">#         R_squared = np.sum(Xt**2, axis=1)</span>
+<span class="c1">#         norm_Xt = R_squared ** (1 / 2)</span>
+<span class="c1">#         # Set the training threshold if not provided</span>
+<span class="c1">#         if self.thresh_train is None:</span>
+<span class="c1">#             self.thresh_train = np.quantile(norm_Xt, 1 - 1 / np.sqrt(len(norm_Xt)))</span>
+
+<span class="c1">#         # set max_dim to ambient dimension if not provided</span>
+<span class="c1">#         if max_dim is None:</span>
+<span class="c1">#             max_dim = Xt.shape[1]</span>
+<span class="c1">#         # define extreme samples</span>
+<span class="c1">#         is_extreme = norm_Xt &gt; self.thresh_train</span>
+<span class="c1">#         X_ext = Xt[is_extreme]</span>
+<span class="c1">#         # Update total mass accordingly</span>
+<span class="c1">#         self.number_extremes = len(X_ext)</span>
+<span class="c1">#         R_ext = norm_Xt[is_extreme]</span>
+<span class="c1">#         ang_ext = X_ext / (R_ext ** (self.beta)).reshape(-1, 1)</span>
+<span class="c1">#         if self.centered:</span>
+<span class="c1">#             center = np.mean(ang_ext, axis=0)</span>
+<span class="c1">#             self.mean_angle = center</span>
+<span class="c1">#             Z = ang_ext - center</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             Z = ang_ext</span>
+<span class="c1">#         U, s, Vh = svd(Z, full_matrices=False)</span>
+<span class="c1">#         self.principal_comp = U[:, :max_dim]</span>
+<span class="c1">#         self.principal_axes = (Vh.transpose())[:, :max_dim]</span>
+<span class="c1">#         self.eigenvalues = s[:max_dim] ** 2</span>
+
+<span class="c1">#     def scores(self, Xtest, max_dim=None):</span>
+<span class="c1">#         &quot;&quot;&quot;The method returns the scores, i.e. the coordinates of the</span>
+<span class="c1">#         points in the array Xtest, in the coordinate system given by</span>
+<span class="c1">#         the principal axes, of the extreme points (with norm greater</span>
+<span class="c1">#         than self.threh_predict) rescaled through the mapping</span>
+<span class="c1">#          x --&gt;  ||x||^{-beta} *  x  where beta = self.beta. The model</span>
+<span class="c1">#         must have been fit beforehand. If `Xtest` is the training data,</span>
+<span class="c1">#         this gives the usual PCA scores of the rescaled extreme data.</span>
+
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         if self.principal_axes is None:</span>
+<span class="c1">#             raise ValueError(&quot;The model has not been fitted&quot;)</span>
+<span class="c1">#         if max_dim is None:</span>
+<span class="c1">#             p = np.shape(self.principal_axes)[1]</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             p = max_dim</span>
+
+<span class="c1">#         if self.thresh_predict is None:</span>
+<span class="c1">#             self.thresh_predict = self.thresh_train</span>
+
+<span class="c1">#         Xt = Xtest</span>
+<span class="c1">#         norm_Xt = np.sum(Xt**2, axis=1) ** (1 / 2)</span>
+<span class="c1">#         # define extreme samples</span>
+<span class="c1">#         is_extreme = norm_Xt &gt; self.thresh_predict</span>
+<span class="c1">#         X_ext = Xt[is_extreme]</span>
+<span class="c1">#         R_ext = norm_Xt[is_extreme]</span>
+<span class="c1">#         ang_ext = X_ext / (R_ext ** (self.beta)).reshape(-1, 1)</span>
+
+<span class="c1">#         if not self.centered:</span>
+<span class="c1">#             Zang = ang_ext</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             Zang = ang_ext - self.mean_angle</span>
+<span class="c1">#         coords_in_pr_axes = Zang @ self.principal_axes[:, :p]</span>
+<span class="c1">#         mask = is_extreme</span>
+<span class="c1">#         return coords_in_pr_axes, X_ext, mask</span>
+
+<span class="c1">#     def predict(self, X_test, max_dim=None):</span>
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         projects X_test onto the</span>
+
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         if self.principal_axes is None:</span>
+<span class="c1">#             raise ValueError(&quot;The model has not been fitted&quot;)</span>
+<span class="c1">#         if max_dim is None:</span>
+<span class="c1">#             p = np.shape(self.principal_axes)[1]</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             p = max_dim</span>
+<span class="c1">#         Scores, X_ext, mask = self.scores(X_test, max_dim)</span>
+<span class="c1">#         recons_angle_intermediate = Scores @ ((self.principal_axes[:, :p]).transpose())</span>
+<span class="c1">#         if self.centered:</span>
+<span class="c1">#             recons_angle = recons_angle_intermediate + self.mean_angle</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             recons_angle = recons_angle_intermediate</span>
+<span class="c1">#         R_ext = (np.sum(X_ext**2, axis=1)) ** (1 / 2)</span>
+<span class="c1">#         recons_X = recons_angle * (R_ext**self.beta).reshape(-1, 1)</span>
+<span class="c1">#         return recons_X, X_ext, mask</span>
+
+<span class="c1">#     def screeplot(self):</span>
+<span class="c1">#         if self.principal_axes is None:</span>
+<span class="c1">#             raise ValueError(&quot;The model has not been fitted&quot;)</span>
+<span class="c1">#         eigenvals = self.eigenvalues</span>
+<span class="c1">#         # Create the scree plot</span>
+<span class="c1">#         plt.figure(figsize=(10, 6))</span>
+<span class="c1">#         plt.plot(eigenvals, &quot;bo-&quot;, markersize=8, label=&quot;Eigenvalues&quot;)</span>
+<span class="c1">#         # Add labels and title</span>
+<span class="c1">#         plt.xlabel(&quot;Principal Component Index&quot;)</span>
+<span class="c1">#         plt.ylabel(&quot;Eigenvalue&quot;)</span>
+<span class="c1">#         plt.title(&quot;Scree Plot&quot;)</span>
+<span class="c1">#         plt.legend()</span>
+<span class="c1">#         plt.grid(True)</span>
+<span class="c1">#         plt.show()</span>
+
+<span class="c1">#     def recons_error(self, X_test, max_dim, test_beta=None):</span>
+<span class="c1">#         &quot;&quot;&quot;The test data are rescaled to ensure existence of second</span>
+<span class="c1">#         moments, namely each test data is transformed following</span>
+
+<span class="c1">#         z   =   || xtest ||^{- beta}  xtest</span>
+
+<span class="c1">#         where  beta &lt;= 1  is given by the argument</span>
+<span class="c1">#         `test_beta`. Default is `test_beta=None`, it which case `test_beta`</span>
+<span class="c1">#         is set to the training value self.beta which default is 1.</span>
+
+<span class="c1">#         &quot;&quot;&quot;</span>
+<span class="c1">#         if test_beta is None:</span>
+<span class="c1">#             beta = self.beta</span>
+<span class="c1">#         else:</span>
+<span class="c1">#             beta = test_beta</span>
+<span class="c1">#         recons_X, X_ext, mask = self.predict(X_test, max_dim)</span>
+
+<span class="c1">#         X_ext_norm = np.sum(X_ext**2, axis=1) ** (1 / 2)</span>
+<span class="c1">#         Z = X_ext / (X_ext_norm**beta).reshape(-1, 1)</span>
+<span class="c1">#         recons_Z = recons_X / (X_ext_norm**beta).reshape(-1, 1)</span>
+<span class="c1">#         Err = np.sum((Z - recons_Z) ** 2, axis=1)</span>
+<span class="c1">#         return Err</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">MLExtreme</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../supervised.html">supervised subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../unsupervised.html">unsupervised subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../utils.html">utils subpackage</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Anne Sabourin, Pierre-Antoine Amiand-Leroy.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

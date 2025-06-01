@@ -12,6 +12,7 @@
     <script src="_static/documentation_options.js?v=8dde47fa"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="unsupervised.mvsets sub-subpackage" href="unsupervised.mvsets.html" />
@@ -35,11 +36,533 @@
             
   <section id="unsupervised-feature-clustering-sub-subpackage">
 <h1>unsupervised.feature_clustering sub-subpackage<a class="headerlink" href="#unsupervised-feature-clustering-sub-subpackage" title="Link to this heading">¶</a></h1>
-<section id="unsupervised-feature-clustering-clef-sub-submodule">
-<h2>unsupervised.feature_clustering.clef sub-submodule<a class="headerlink" href="#unsupervised-feature-clustering-clef-sub-submodule" title="Link to this heading">¶</a></h2>
+<section id="module-unsupervised.feature_clustering.clef">
+<span id="unsupervised-feature-clustering-clef-sub-submodule"></span><h2>unsupervised.feature_clustering.clef sub-submodule<a class="headerlink" href="#module-unsupervised.feature_clustering.clef" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">unsupervised.feature_clustering.clef.</span></span><span class="sig-name descname"><span class="pre">clef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">kappa_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_train</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class for performing clustering of large extreme features (CLEF) on a dataset.</p>
+<p>This class provides methods to fit the CLEF model to data, calculate deviance, compute the
+Akaike Information Criterion (AIC), select optimal kappa_min values based on AIC or
+cross-validation, and calculate the deviance between estimated and true subfaces.</p>
+<section id="parameters">
+<h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>kappa_min<span class="classifier">float, default=0.1</span></dt><dd><p>Tolerance level for clustering.</p>
+</dd>
+<dt>thresh_train<span class="classifier">float, optional</span></dt><dd><p>Threshold for training data.</p>
+</dd>
+<dt>thresh_test<span class="classifier">float, optional</span></dt><dd><p>Threshold for test data.</p>
+</dd>
+<dt>rate<span class="classifier">float, default=10</span></dt><dd><p>Rate parameter for the dispersion model on subfaces.</p>
+</dd>
+</dl>
 </section>
-<section id="unsupervised-feature-clustering-damex-sub-submodule">
-<h2>unsupervised.feature_clustering.damex sub-submodule<a class="headerlink" href="#unsupervised-feature-clustering-damex-sub-submodule" title="Link to this heading">¶</a></h2>
+<section id="attributes">
+<h3>Attributes:<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>subfaces<span class="classifier">list</span></dt><dd><p>Identified subfaces.</p>
+</dd>
+<dt>masses<span class="classifier">array-like</span></dt><dd><p>Masses associated with subfaces.</p>
+</dd>
+<dt>total_mass<span class="classifier">float</span></dt><dd><p>Total mass of extremes.</p>
+</dd>
+<dt>number_extremes<span class="classifier">int</span></dt><dd><p>Number of extreme points.</p>
+</dd>
+<dt>dimension<span class="classifier">int</span></dt><dd><p>Dimensionality of the data.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.deviance">
+<span class="sig-name descname"><span class="pre">deviance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xtest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.deviance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.deviance" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the deviance of the (trained) model on test data, normalized by the extreme sample size.</p>
+<p>First the test data is transformed into a binary matrix, say
+<cite>testBinary</cite>. Each row corresponds to a sample point which
+norm exceeds <cite>thresh_test</cite>.  The binary entries indicates
+which coordinates of a given extreme point exceed the quantity
+<cite>epsilon * thresh_test</cite>.</p>
+<p>Then the subfaces previously learnt by the model (stored in
+<cite>self.subfaces</cite>), together with the associated masses, are
+compared to <cite>testBinary</cite> in a a dispersion model.</p>
+<p>The basic building block of the dispersion model is a unit
+deviance d(subface_i, subface_j) defined between subfaces, as
+the ratio between the cardinalities of the symmetric
+difference and the union of the two sets of coordinates
+defining the suface, see
+<code class="xref py py-func docutils literal notranslate"><span class="pre">unsupervised.feature_clustering.utilities.unit_deviance()</span></code>. This is the same unit deviance as the one proposed in Reference [4]  below</p>
+<p>The total (normalized) deviance is then defined as</p>
+<div class="math notranslate nohighlight">
+\[\frac{- 2}{n_{extremes}}\sum_{i=1}^{n_{extremes}}             \log\Big( \sum_{j=1}^{n_{faces}}             w_j \exp(- rate *d(testBinary_i, subface_j) ) \Big),\]</div>
+<p>where <cite>n_{extremes}</cite> is the number of samples which radius
+exceeds <cite>thresh_test</cite> in <cite>Xtest</cite>, rate=`self.rate`. It may be seen as</p>
+<p>“Twice the negative pseudo-likelihood in a dispersion model à la Jorgensen, divided by the extreme sample size”</p>
+<section id="references">
+<h4>References:<a class="headerlink" href="#references" title="Link to this heading">¶</a></h4>
+<p>[1] Cordeiro, G. M., Labouriau, R., &amp; Botter, D. A. (2021).         An introduction to Bent Jørgensen’s ideas. Brazilian Journal of Probability and Statistics, 35(1), 2-20.</p>
+<p>[2] Jørgensen, B. (1987). Exponential dispersion models.         Journal of the Royal Statistical Society Series B: Statistical Methodology,         49(2), 127-145.</p>
+<p>[3] Jørgensen, B. (1997). The theory of dispersion models. CRC Press.</p>
+<p>[4] Chiapino, M., &amp; Sabourin, A. (2016, September). Feature clustering for extreme events analysis, with application to extreme stream-flow data. In International workshop on new frontiers in mining complex patterns (pp. 132-147). Cham: Springer International Publishing.</p>
+</section>
+<section id="id1">
+<h4>Parameters:<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Xtest<span class="classifier">np.ndarray</span></dt><dd><p>Test data.</p>
+</dd>
+<dt>thresh_test<span class="classifier">float, optional</span></dt><dd><p>Threshold for identifying extremes in the test set.
+If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=False</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h4>Returns:<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>float</dt><dd><p>Deviance value,that is twice the negative pseudo-likelihood, divided by the number of extremes.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.deviance_CV">
+<span class="sig-name descname"><span class="pre">deviance_CV</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kappa_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.deviance_CV"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.deviance_CV" title="Link to this definition">¶</a></dt>
+<dd><p>Estimate the expected deviance using cross-validation. See <a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.deviance" title="unsupervised.feature_clustering.clef.clef.deviance"><code class="xref py py-func docutils literal notranslate"><span class="pre">deviance()</span></code></a></p>
+<section id="id2">
+<h4>Parameters:<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+<dt>kappa_min<span class="classifier">float, optional</span></dt><dd><p>Tolerance level for clustering. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>thresh_test<span class="classifier">float, optional</span></dt><dd><p>Radial threshold for test sets. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>cv<span class="classifier">int, default=5</span></dt><dd><p>Number of cross-validation folds.</p>
+</dd>
+<dt>random_state<span class="classifier">int, optional</span></dt><dd><p>Random seed for reproducibility.</p>
+</dd>
+</dl>
+</section>
+<section id="id3">
+<h4>Returns:<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>np.ndarray</dt><dd><p>Cross-validated deviance scores.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.deviance_to_true">
+<span class="sig-name descname"><span class="pre">deviance_to_true</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">subfaces_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights_true</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.deviance_to_true"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.deviance_to_true" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the deviance between the estimated subfaces and
+the true subfaces.</p>
+<p>The function  returns a tuple (est_to_truth, truth_to_est) respectively
+defined as follows:</p>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}   \text{est-to-truth} = -2        \sum_{j}^{\text{N-estimated}}         w^{estim}_j \log \Big(         \sum_{i=1}^{\text{N-true}}       w^{true}_i e^{-\text{rate}*d(\text{estimated-subface}_j,         \text{true-subface}_i)}         \Big)\\   \text{tuth-to-est} = -2        \sum_{i=1}^{\text{N-true}}         w^{true}_i \log \Big(         \sum_{j}^{\text{N-estimated}}         w^{estim}_j
+e^{-\text{rate}*d(\text{estimated-subface}_j,         \text{true-subface}_i)}         \Big)\end{aligned}\end{align} \]</div>
+<p>where <span class="math notranslate nohighlight">\(w^{estim}_j =\)</span> self.mass[j-1] / sum(self.masses) and
+<span class="math notranslate nohighlight">\(w^{truth}_j\)</span> is the mass of the considered true subface divided
+by the total mass of extremes</p>
+<section id="id4">
+<h4>Parameters:<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>subfaces_true<span class="classifier">list</span></dt><dd><p>True subfaces.</p>
+</dd>
+<dt>weights_true<span class="classifier">list</span></dt><dd><p>Weights of the true subfaces.</p>
+</dd>
+</dl>
+</section>
+<section id="id5">
+<h4>Returns:<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>est_to_truth<span class="classifier">float</span></dt><dd><p>Deviance from estimated to true subfaces.</p>
+</dd>
+<dt>truth_to_est<span class="classifier">float</span></dt><dd><p>Deviance from true to estimated subfaces.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kappa_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Fit the CLEF model to the data.</p>
+<section id="id6">
+<h4>Parameters:<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>kappa_min<span class="classifier">float, optional</span></dt><dd><p>Tolerance level for clustering. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+</dl>
+</section>
+<section id="id7">
+<h4>Returns:<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Subfaces<span class="classifier">list</span></dt><dd><p>Identified subfaces.</p>
+</dd>
+<dt>Masses<span class="classifier">np.ndarray</span></dt><dd><p>Masses associated with subfaces.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.get_AIC">
+<span class="sig-name descname"><span class="pre">get_AIC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xtrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.get_AIC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.get_AIC" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the Akaike Information Criterion (AIC) for the
+model incorporating the normalized deviance from
+<code class="xref py py-func docutils literal notranslate"><span class="pre">self.deviance()</span></code> and the (normalized again) number of
+components in the model, that is the number of subfaces with
+positive extreme mass. More precisely the function returns</p>
+<p>self.deviance  + 2 * number_of_subfaces/number_of_extremes</p>
+<p>where whe recall that self.deviance is:</p>
+<p>“twice the negative pseudo log-likelihood in a dispersion model”</p>
+<section id="id8">
+<h4>Parameters:<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Xtrain<span class="classifier">np.ndarray</span></dt><dd><p>Training data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+</dl>
+</section>
+<section id="id9">
+<h4>Returns:<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>float</dt><dd><p>AIC value.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.select_kappa_min_AIC">
+<span class="sig-name descname"><span class="pre">select_kappa_min_AIC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unstable_kappam_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_kappa_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.select_kappa_min_AIC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.select_kappa_min_AIC" title="Link to this definition">¶</a></dt>
+<dd><p>Select the optimal kappa_min value based on AIC.</p>
+<section id="id10">
+<h4>Parameters:<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>grid<span class="classifier">list</span></dt><dd><p>Grid of kappa_min values to test.</p>
+</dd>
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+<dt>unstable_kappam_max<span class="classifier">float, default=0.05</span></dt><dd><p>Maximum kappa_min value for unstable solutions. The selected value returned by the function will be greater than this parameter.</p>
+</dd>
+<dt>plot<span class="classifier">bool, default=False</span></dt><dd><p>Whether to plot the AIC values.</p>
+</dd>
+<dt>update_kappa_min<span class="classifier">bool, default=False</span></dt><dd><p>Whether to update the model’s kappa_min value.</p>
+</dd>
+</dl>
+</section>
+<section id="id11">
+<h4>Returns:<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>kappam_select_aic<span class="classifier">float</span></dt><dd><p>Selected kappa_min value.</p>
+</dd>
+<dt>aic_opt<span class="classifier">float</span></dt><dd><p>Optimal AIC value.</p>
+</dd>
+<dt>vect_aic<span class="classifier">np.ndarray</span></dt><dd><p>Vector of AIC values.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.clef.clef.select_kappa_min_CV">
+<span class="sig-name descname"><span class="pre">select_kappa_min_CV</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_kappa_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unstable_tol_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/clef.html#clef.select_kappa_min_CV"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.clef.clef.select_kappa_min_CV" title="Link to this definition">¶</a></dt>
+<dd><p>Select the optimal kappa_min value based on cross-validation.</p>
+<section id="id12">
+<h4>Parameters:<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>grid<span class="classifier">list</span></dt><dd><p>Grid of kappa_min values to test.</p>
+</dd>
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+<dt>update_kappa_min<span class="classifier">bool, default=False</span></dt><dd><p>Whether to update the model’s kappa_min value.</p>
+</dd>
+<dt>unstable_tol_max<span class="classifier">float, default=0.05</span></dt><dd><p>Maximum tolerance value for unstable solutions.</p>
+</dd>
+<dt>cv<span class="classifier">int, default=5</span></dt><dd><p>Number of cross-validation folds.</p>
+</dd>
+<dt>random_state<span class="classifier">int, optional</span></dt><dd><p>Random seed for reproducibility.</p>
+</dd>
+<dt>plot<span class="classifier">bool, default=False</span></dt><dd><p>Whether to plot the CV deviance values.</p>
+</dd>
+</dl>
+</section>
+<section id="id13">
+<h4>Returns:<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>tol_cv<span class="classifier">float</span></dt><dd><p>Selected kappa_min value.</p>
+</dd>
+<dt>deviance_tol_cv<span class="classifier">float</span></dt><dd><p>Deviance value for the selected kappa_min.</p>
+</dd>
+<dt>cv_deviance_vect<span class="classifier">np.ndarray</span></dt><dd><p>Vector of CV deviance values.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+<section id="module-unsupervised.feature_clustering.damex">
+<span id="unsupervised-feature-clustering-damex-sub-submodule"></span><h2>unsupervised.feature_clustering.damex sub-submodule<a class="headerlink" href="#module-unsupervised.feature_clustering.damex" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">unsupervised.feature_clustering.damex.</span></span><span class="sig-name descname"><span class="pre">damex</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_counts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_train</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_singletons</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An unsupervised feature clustering model to learn “which subsets of features of a random vector
+are likely to be simultaneously large, while the others are small”.</p>
+<p>This class provides methods to fit the model to data, calculate deviance, compute the Akaike
+Information Criterion (AIC), select optimal epsilon values based on AIC or cross-validation,
+and calculate the deviance between estimated and true subfaces.</p>
+<section id="id14">
+<h3>Parameters:<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>epsilon<span class="classifier">float, default=0.1</span></dt><dd><p>Tolerance level for clustering.</p>
+</dd>
+<dt>min_counts<span class="classifier">int, default=0</span></dt><dd><p>Minimum number of points required to form a cluster.</p>
+</dd>
+<dt>thresh_train<span class="classifier">float, optional</span></dt><dd><p>Threshold for training data.</p>
+</dd>
+<dt>thresh_test<span class="classifier">float, optional</span></dt><dd><p>Threshold for test data.</p>
+</dd>
+<dt>include_singletons<span class="classifier">bool, default=False</span></dt><dd><p>Whether to include singletons in training and testing.</p>
+</dd>
+<dt>rate<span class="classifier">float, default=10</span></dt><dd><p>Rate parameter for the dispersion model on subfaces.</p>
+</dd>
+</dl>
+</section>
+<section id="id15">
+<h3>Attributes:<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>subfaces<span class="classifier">list</span></dt><dd><p>Identified subfaces.</p>
+</dd>
+<dt>masses<span class="classifier">array-like</span></dt><dd><p>Masses associated with subfaces.</p>
+</dd>
+<dt>total_mass<span class="classifier">float</span></dt><dd><p>Total mass of extremes.</p>
+</dd>
+<dt>number_extremes<span class="classifier">int</span></dt><dd><p>Number of extreme points.</p>
+</dd>
+<dt>dimension<span class="classifier">int</span></dt><dd><p>Dimensionality of the data.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.deviance">
+<span class="sig-name descname"><span class="pre">deviance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xtest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.deviance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.deviance" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the deviance of the model on test data.</p>
+<p>For more details see <code class="xref py py-func docutils literal notranslate"><span class="pre">clef.deviance()</span></code></p>
+<section id="id16">
+<h4>Parameters:<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Xtest<span class="classifier">np.ndarray</span></dt><dd><p>Test data.</p>
+</dd>
+<dt>thresh_test<span class="classifier">float, optional</span></dt><dd><p>Threshold for identifying extremes in the test set. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=False</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+</dl>
+</section>
+<section id="id17">
+<h4>Returns:<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>float</dt><dd><p>Deviance value.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.deviance_CV">
+<span class="sig-name descname"><span class="pre">deviance_CV</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.deviance_CV"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.deviance_CV" title="Link to this definition">¶</a></dt>
+<dd><p>Estimate the expected deviance using cross-validation.</p>
+<section id="id18">
+<h4>Parameters:<a class="headerlink" href="#id18" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+<dt>epsilon<span class="classifier">float, optional</span></dt><dd><p>Tolerance level for clustering. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>thresh_test<span class="classifier">float, optional</span></dt><dd><p>Radial threshold for test sets. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>cv<span class="classifier">int, default=5</span></dt><dd><p>Number of cross-validation folds.</p>
+</dd>
+<dt>random_state<span class="classifier">int, optional</span></dt><dd><p>Random seed for reproducibility.</p>
+</dd>
+</dl>
+</section>
+<section id="id19">
+<h4>Returns:<a class="headerlink" href="#id19" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>np.ndarray</dt><dd><p>Cross-validated deviance scores.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.deviance_to_true">
+<span class="sig-name descname"><span class="pre">deviance_to_true</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">subfaces_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights_true</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.deviance_to_true"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.deviance_to_true" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the deviance between the estimated subfaces and the true subfaces.</p>
+<section id="id20">
+<h4>Parameters:<a class="headerlink" href="#id20" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>subfaces_true<span class="classifier">list</span></dt><dd><p>True subfaces.</p>
+</dd>
+<dt>weights_true<span class="classifier">list</span></dt><dd><p>Weights of the true subfaces.</p>
+</dd>
+</dl>
+</section>
+<section id="id21">
+<h4>Returns:<a class="headerlink" href="#id21" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>est_to_truth<span class="classifier">float</span></dt><dd><p>Deviance from estimated to true subfaces.</p>
+</dd>
+<dt>truth_to_est<span class="classifier">float</span></dt><dd><p>Deviance from true to estimated subfaces.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Fit the DAMEX model to the data.</p>
+<section id="id22">
+<h4>Parameters:<a class="headerlink" href="#id22" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>epsilon<span class="classifier">float, optional</span></dt><dd><p>Tolerance level for clustering. If None, the instance’s attribute will be used.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+</dl>
+</section>
+<section id="id23">
+<h4>Returns:<a class="headerlink" href="#id23" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Subfaces<span class="classifier">list</span></dt><dd><p>Identified subfaces.</p>
+</dd>
+<dt>Masses<span class="classifier">np.ndarray</span></dt><dd><p>Masses associated with subfaces.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.get_AIC">
+<span class="sig-name descname"><span class="pre">get_AIC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xtrain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.get_AIC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.get_AIC" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the Akaike Information Criterion (AIC) for the model.</p>
+<section id="id24">
+<h4>Parameters:<a class="headerlink" href="#id24" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Xtrain<span class="classifier">np.ndarray</span></dt><dd><p>Training data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+</dl>
+</section>
+<section id="id25">
+<h4>Returns:<a class="headerlink" href="#id25" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>float</dt><dd><p>AIC value.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.select_epsilon_AIC">
+<span class="sig-name descname"><span class="pre">select_epsilon_AIC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unstable_eps_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.select_epsilon_AIC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.select_epsilon_AIC" title="Link to this definition">¶</a></dt>
+<dd><p>Select the optimal epsilon value based on AIC.</p>
+<section id="id26">
+<h4>Parameters:<a class="headerlink" href="#id26" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>grid<span class="classifier">list</span></dt><dd><p>Grid of epsilon values to test.</p>
+</dd>
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+<dt>unstable_eps_max<span class="classifier">float, default=0.05</span></dt><dd><p>Maximum epsilon value for unstable solutions.</p>
+</dd>
+<dt>plot<span class="classifier">bool, default=False</span></dt><dd><p>Whether to plot the AIC values.</p>
+</dd>
+<dt>update_epsilon<span class="classifier">bool, default=False</span></dt><dd><p>Whether to update the model’s epsilon value.</p>
+</dd>
+</dl>
+</section>
+<section id="id27">
+<h4>Returns:<a class="headerlink" href="#id27" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>eps_select_aic<span class="classifier">float</span></dt><dd><p>Selected epsilon value.</p>
+</dd>
+<dt>aic_opt<span class="classifier">float</span></dt><dd><p>Optimal AIC value.</p>
+</dd>
+<dt>vect_aic<span class="classifier">np.ndarray</span></dt><dd><p>Vector of AIC values.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.feature_clustering.damex.damex.select_epsilon_CV">
+<span class="sig-name descname"><span class="pre">select_epsilon_CV</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">standardize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">update_epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unstable_tol_max</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_test</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/feature_clustering/damex.html#damex.select_epsilon_CV"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.feature_clustering.damex.damex.select_epsilon_CV" title="Link to this definition">¶</a></dt>
+<dd><p>Select the optimal epsilon value based on cross-validation.</p>
+<section id="id28">
+<h4>Parameters:<a class="headerlink" href="#id28" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>grid<span class="classifier">list</span></dt><dd><p>Grid of epsilon values to test.</p>
+</dd>
+<dt>X<span class="classifier">np.ndarray</span></dt><dd><p>Input data.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, default=True</span></dt><dd><p>Whether to standardize the data.</p>
+</dd>
+<dt>update_epsilon<span class="classifier">bool, default=False</span></dt><dd><p>Whether to update the model’s epsilon value.</p>
+</dd>
+<dt>unstable_tol_max<span class="classifier">float, default=0.05</span></dt><dd><p>Maximum tolerance value for unstable solutions.</p>
+</dd>
+<dt>cv<span class="classifier">int, default=5</span></dt><dd><p>Number of cross-validation folds.</p>
+</dd>
+<dt>random_state<span class="classifier">int, optional</span></dt><dd><p>Random seed for reproducibility.</p>
+</dd>
+<dt>plot<span class="classifier">bool, default=False</span></dt><dd><p>Whether to plot the CV deviance values.</p>
+</dd>
+</dl>
+</section>
+<section id="id29">
+<h4>Returns:<a class="headerlink" href="#id29" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>tol_cv<span class="classifier">float</span></dt><dd><p>Selected epsilon value.</p>
+</dd>
+<dt>deviance_tol_cv<span class="classifier">float</span></dt><dd><p>Deviance value for the selected epsilon.</p>
+</dd>
+<dt>cv_deviance_vect<span class="classifier">np.ndarray</span></dt><dd><p>Vector of CV deviance values.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
 </section>
 </section>
 
@@ -75,8 +598,32 @@
 <li class="toctree-l1 current"><a class="reference internal" href="unsupervised.html">unsupervised subpackage</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="unsupervised.pca.html">unsupervised.pca sub-subpackage</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">unsupervised.feature_clustering sub-subpackage</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unsupervised-feature-clustering-clef-sub-submodule">unsupervised.feature_clustering.clef sub-submodule</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#unsupervised-feature-clustering-damex-sub-submodule">unsupervised.feature_clustering.damex sub-submodule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-unsupervised.feature_clustering.clef">unsupervised.feature_clustering.clef sub-submodule</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef"><code class="docutils literal notranslate"><span class="pre">clef</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.deviance"><code class="docutils literal notranslate"><span class="pre">clef.deviance()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.deviance_CV"><code class="docutils literal notranslate"><span class="pre">clef.deviance_CV()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.deviance_to_true"><code class="docutils literal notranslate"><span class="pre">clef.deviance_to_true()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.fit"><code class="docutils literal notranslate"><span class="pre">clef.fit()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.get_AIC"><code class="docutils literal notranslate"><span class="pre">clef.get_AIC()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.select_kappa_min_AIC"><code class="docutils literal notranslate"><span class="pre">clef.select_kappa_min_AIC()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.clef.clef.select_kappa_min_CV"><code class="docutils literal notranslate"><span class="pre">clef.select_kappa_min_CV()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-unsupervised.feature_clustering.damex">unsupervised.feature_clustering.damex sub-submodule</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex"><code class="docutils literal notranslate"><span class="pre">damex</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.deviance"><code class="docutils literal notranslate"><span class="pre">damex.deviance()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.deviance_CV"><code class="docutils literal notranslate"><span class="pre">damex.deviance_CV()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.deviance_to_true"><code class="docutils literal notranslate"><span class="pre">damex.deviance_to_true()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.fit"><code class="docutils literal notranslate"><span class="pre">damex.fit()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.get_AIC"><code class="docutils literal notranslate"><span class="pre">damex.get_AIC()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.select_epsilon_AIC"><code class="docutils literal notranslate"><span class="pre">damex.select_epsilon_AIC()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.feature_clustering.damex.damex.select_epsilon_CV"><code class="docutils literal notranslate"><span class="pre">damex.select_epsilon_CV()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="unsupervised.mvsets.html">unsupervised.mvsets sub-subpackage</a></li>

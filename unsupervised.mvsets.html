@@ -35,8 +35,164 @@
             
   <section id="unsupervised-mvsets-sub-subpackage">
 <h1>unsupervised.mvsets sub-subpackage<a class="headerlink" href="#unsupervised-mvsets-sub-subpackage" title="Link to this heading">¶</a></h1>
-<section id="unsupervised-mvsets-mvsets-sub-submodule">
-<h2>unsupervised.mvsets.mvsets sub-submodule<a class="headerlink" href="#unsupervised-mvsets-mvsets-sub-submodule" title="Link to this heading">¶</a></h2>
+<section id="module-unsupervised.mvsets.mvsets">
+<span id="unsupervised-mvsets-mvsets-sub-submodule"></span><h2>unsupervised.mvsets.mvsets sub-submodule<a class="headerlink" href="#module-unsupervised.mvsets.mvsets" title="Link to this heading">¶</a></h2>
+<p>File: mvsets.py
+Author: Anne Sabourin
+Date: 2025</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.Angular_bin">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">unsupervised.mvsets.mvsets.</span></span><span class="sig-name descname"><span class="pre">Angular_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coords</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#Angular_bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.Angular_bin" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Building blocks of angular minimum-volume sets (mvsets)
+constructed from a regular paving of the unit sphere for the
+infinite norm. Geometrically, each grid is a rectangle on the
+positive orthant of the unit sphere defined from the infinite
+norm, of the kind:</p>
+<p>prod_{i in {1, …, d}, i != i_0} [j_i/J, (j_i+1)/J) x {e_{i_0}}</p>
+<p>where j_i in {0, …, J-1}, J is the chosen number of basic
+subdivisions of the interval [0, 1) and i_0 is the index of the
+canonical basis vector e_{i_0} normal to the face where the bin is
+located.</p>
+<p>Internally a bin is encoded as a np.array of integers in 0, …, J-1
+of dimension d, containing the lower end points of the intervals in
+the product, except for the i_0^{th} entry which is equal to J. A hash
+function is provided to enable quick responses to queries about the
+existence of keys in a dictionary of <cite>angular_bin</cite> class instances.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.Xmvset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">unsupervised.mvsets.mvsets.</span></span><span class="sig-name descname"><span class="pre">Xmvset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thresh_train</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_predict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">J</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#Xmvset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.Xmvset" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Minimum-volume set estimation and anomaly scoring.</p>
+<p>Implements the methods developed in [1].</p>
+<p>Compared with the implementation proposed in [1] the only  difference resides on the data structure manipulation performs to affect points to the building blocks of the mass-volume sets. This doess not affect the output.</p>
+<p class="rubric">References</p>
+<p>[1] Thomas, A., Clémençon, S., Gramfort, A., &amp; Sabourin, A. (2017, April). Anomaly Detection in Extreme Regions via Empirical MV-sets on the Sphere. In AISTATS (Vol. 54).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.Xmvset.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#Xmvset.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.Xmvset.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Fit the model to the input data.</p>
+<section id="parameters">
+<h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>X<span class="classifier">np.array</span></dt><dd><p>The input data.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.Xmvset.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#Xmvset.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.Xmvset.predict" title="Link to this definition">¶</a></dt>
+<dd><p>Predicts whether extreme points belong to an extreme angular minimum-volume
+set at level alpha.</p>
+<section id="id1">
+<h3>Parameters:<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>X_test<span class="classifier">np.array</span></dt><dd><p>Array of test data.</p>
+</dd>
+<dt>alpha<span class="classifier">float</span></dt><dd><p>Proportion of extreme points contained in the angular minimum-volume set.</p>
+</dd>
+<dt>standardize<span class="classifier">bool, optional</span></dt><dd><p>If True, the test points are rank-transformed based on the training data.
+Default is True.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h3>Returns:<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>np.array</dt><dd><p>An array of boolean values of the same length as X_test, indicating
+whether each point belongs to the extreme angular minimum-volume set.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.Xmvset.score">
+<span class="sig-name descname"><span class="pre">score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angular_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#Xmvset.score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.Xmvset.score" title="Link to this definition">¶</a></dt>
+<dd><p>Return the angular score of extreme points defined simply as an
+un-normalized histogram-based estimated angular density.
+The lower, the more abnormal.</p>
+<section id="id2">
+<h3>Parameters:<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>X_test<span class="classifier">np.array</span></dt><dd><p>Array of test data.</p>
+</dd>
+<dt>angular_only<span class="classifier">bool, optional</span></dt><dd><p>If True, only the angular score is returned. Default is False.</p>
+</dd>
+</dl>
+</section>
+<section id="id3">
+<h3>Returns:<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>np.array</dt><dd><p>An array of scores of the same length as X_test.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.Xmvset.set_default_J">
+<span class="sig-name descname"><span class="pre">set_default_J</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#Xmvset.set_default_J"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.Xmvset.set_default_J" title="Link to this definition">¶</a></dt>
+<dd><p>Set the default value for J based on the input data.</p>
+<section id="id4">
+<h3>Parameters:<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>X<span class="classifier">np.array</span></dt><dd><p>The input data.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.get_angular_bin">
+<span class="sig-prename descclassname"><span class="pre">unsupervised.mvsets.mvsets.</span></span><span class="sig-name descname"><span class="pre">get_angular_bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">point</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">J</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Angular_bin" title="unsupervised.mvsets.mvsets.Angular_bin"><span class="pre">Angular_bin</span></a></span></span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#get_angular_bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.get_angular_bin" title="Link to this definition">¶</a></dt>
+<dd><p>Get the angular bin for a given point.</p>
+<section id="id5">
+<h3>Parameters:<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>point<span class="classifier">np.array</span></dt><dd><p>The point for which to find the angular bin.</p>
+</dd>
+<dt>J<span class="classifier">int</span></dt><dd><p>The number of subdivisions of the interval [0, 1).</p>
+</dd>
+</dl>
+</section>
+<section id="id6">
+<h3>Returns:<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>Angular_bin</dt><dd><p>The angular bin corresponding to the given point.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="unsupervised.mvsets.mvsets.sort_bins_by_mass">
+<span class="sig-prename descclassname"><span class="pre">unsupervised.mvsets.mvsets.</span></span><span class="sig-name descname"><span class="pre">sort_bins_by_mass</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">J</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#unsupervised.mvsets.mvsets.Angular_bin" title="unsupervised.mvsets.mvsets.Angular_bin"><span class="pre">Angular_bin</span></a><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/unsupervised/mvsets/mvsets.html#sort_bins_by_mass"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.mvsets.mvsets.sort_bins_by_mass" title="Link to this definition">¶</a></dt>
+<dd><p>Sort angular bins by their mass.</p>
+<section id="id7">
+<h3>Parameters:<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>X<span class="classifier">np.array</span></dt><dd><p>The input data.</p>
+</dd>
+<dt>J<span class="classifier">int</span></dt><dd><p>The number of subdivisions of the interval [0, 1).</p>
+</dd>
+</dl>
+</section>
+<section id="id8">
+<h3>Returns:<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>list[Angular_bin]</dt><dd><p>A list of angular bins sorted by mass in descending order.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
 </section>
 </section>
 
@@ -73,7 +229,19 @@
 <li class="toctree-l2"><a class="reference internal" href="unsupervised.pca.html">unsupervised.pca sub-subpackage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="unsupervised.feature_clustering.html">unsupervised.feature_clustering sub-subpackage</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">unsupervised.mvsets sub-subpackage</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unsupervised-mvsets-mvsets-sub-submodule">unsupervised.mvsets.mvsets sub-submodule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-unsupervised.mvsets.mvsets">unsupervised.mvsets.mvsets sub-submodule</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Angular_bin"><code class="docutils literal notranslate"><span class="pre">Angular_bin</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Xmvset"><code class="docutils literal notranslate"><span class="pre">Xmvset</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Xmvset.fit"><code class="docutils literal notranslate"><span class="pre">Xmvset.fit()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Xmvset.predict"><code class="docutils literal notranslate"><span class="pre">Xmvset.predict()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Xmvset.score"><code class="docutils literal notranslate"><span class="pre">Xmvset.score()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.mvsets.mvsets.Xmvset.set_default_J"><code class="docutils literal notranslate"><span class="pre">Xmvset.set_default_J()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.mvsets.mvsets.get_angular_bin"><code class="docutils literal notranslate"><span class="pre">get_angular_bin()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.mvsets.mvsets.sort_bins_by_mass"><code class="docutils literal notranslate"><span class="pre">sort_bins_by_mass()</span></code></a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>

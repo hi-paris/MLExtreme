@@ -36,8 +36,166 @@
   <section id="unsupervised-pca-sub-subpackage">
 <h1>unsupervised.pca sub-subpackage<a class="headerlink" href="#unsupervised-pca-sub-subpackage" title="Link to this heading">¶</a></h1>
 <p>Principal Component Analysis on the angular component of extremes</p>
-<section id="unsupervised-pca-pca-sub-submodule">
-<h2>unsupervised.pca.pca sub-submodule<a class="headerlink" href="#unsupervised-pca-pca-sub-submodule" title="Link to this heading">¶</a></h2>
+<section id="module-unsupervised.pca.pca">
+<span id="unsupervised-pca-pca-sub-submodule"></span><h2>unsupervised.pca.pca sub-submodule<a class="headerlink" href="#module-unsupervised.pca.pca" title="Link to this heading">¶</a></h2>
+<p>Module implementing PCA for extremes</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="unsupervised.pca.pca.Xpca">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">unsupervised.pca.pca.</span></span><span class="sig-name descname"><span class="pre">Xpca</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thresh_train</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thresh_predict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">centered</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/pca/pca.html#Xpca"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.pca.pca.Xpca" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A class for performing Principal Component Analysis (PCA) on extreme points of a dataset.</p>
+<p>This class provides methods to fit the PCA model to training data, compute scores for test data,
+predict the projection of test data onto the principal axes, generate scree plots, and calculate
+reconstruction errors.</p>
+<section id="parameters">
+<h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>thresh_train<span class="classifier">float, optional</span></dt><dd><p>Threshold for identifying extreme points during training.</p>
+</dd>
+<dt>thresh_predict<span class="classifier">float, optional</span></dt><dd><p>Threshold for identifying extreme points during prediction.</p>
+</dd>
+<dt>beta<span class="classifier">float, default=1</span></dt><dd><p>Scaling factor for rescaling extreme points.</p>
+</dd>
+<dt>centered<span class="classifier">bool, default=False</span></dt><dd><p>Whether to center the data by subtracting the mean angle.</p>
+</dd>
+</dl>
+</section>
+<section id="attributes">
+<h3>Attributes:<a class="headerlink" href="#attributes" title="Link to this heading">¶</a></h3>
+<dl class="simple">
+<dt>thresh_train<span class="classifier">float</span></dt><dd><p>Threshold for identifying extreme points during training.</p>
+</dd>
+<dt>thresh_predict<span class="classifier">float</span></dt><dd><p>Threshold for identifying extreme points during prediction.</p>
+</dd>
+<dt>beta<span class="classifier">float</span></dt><dd><p>Scaling factor for rescaling extreme points.</p>
+</dd>
+<dt>centered<span class="classifier">bool</span></dt><dd><p>Whether to center the data by subtracting the mean angle.</p>
+</dd>
+<dt>mean_angle<span class="classifier">array-like</span></dt><dd><p>Mean angle of the extreme points.</p>
+</dd>
+<dt>principal_comp<span class="classifier">array-like</span></dt><dd><p>Principal components of the extreme points.</p>
+</dd>
+<dt>principal_axes<span class="classifier">array-like</span></dt><dd><p>Principal axes of the extreme points.</p>
+</dd>
+<dt>eigenvalues<span class="classifier">array-like</span></dt><dd><p>Eigenvalues of the extreme points.</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.pca.pca.Xpca.fit">
+<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/pca/pca.html#Xpca.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.pca.pca.Xpca.fit" title="Link to this definition">¶</a></dt>
+<dd><p>Perform PCA by computing the singular value decomposition of the rescaled extreme points on the training dataset X.</p>
+<p>Each extreme point <cite>x</cite> is rescaled by the factor ||x||^{-beta}. The default value for beta is 1.
+Admissible values are in the interval (1 - alpha/2, 1], where alpha is the regular variation index of the input X.</p>
+<section id="id1">
+<h4>Parameters:<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X<span class="classifier">array-like</span></dt><dd><p>Training data.</p>
+</dd>
+<dt>max_dim<span class="classifier">int, optional</span></dt><dd><p>Maximum number of dimensions to consider for PCA.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.pca.pca.Xpca.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/pca/pca.html#Xpca.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.pca.pca.Xpca.predict" title="Link to this definition">¶</a></dt>
+<dd><p>Project X_test onto the principal axes.</p>
+<section id="id2">
+<h4>Parameters:<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X_test<span class="classifier">array-like</span></dt><dd><p>Test data.</p>
+</dd>
+<dt>max_dim<span class="classifier">int, optional</span></dt><dd><p>Maximum number of dimensions to consider for prediction.</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h4>Returns:<a class="headerlink" href="#returns" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>recons_X<span class="classifier">array-like</span></dt><dd><p>Reconstructed data.</p>
+</dd>
+<dt>X_ext<span class="classifier">array-like</span></dt><dd><p>Extreme points in the test data.</p>
+</dd>
+<dt>mask<span class="classifier">array-like</span></dt><dd><p>Boolean mask indicating extreme points.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.pca.pca.Xpca.recons_error">
+<span class="sig-name descname"><span class="pre">recons_error</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_test</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_beta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/pca/pca.html#Xpca.recons_error"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.pca.pca.Xpca.recons_error" title="Link to this definition">¶</a></dt>
+<dd><p>Calculate the reconstruction error for the test data.</p>
+<p>The test data are rescaled to ensure existence of second moments, namely each test data is transformed following
+z = ||xtest||^{-beta} xtest, where beta &lt;= 1 is given by the argument <cite>test_beta</cite>.
+Default is <cite>test_beta=None</cite>, in which case <cite>test_beta</cite> is set to the training value self.beta which defaults to 1.</p>
+<section id="id3">
+<h4>Parameters:<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>X_test<span class="classifier">array-like</span></dt><dd><p>Test data.</p>
+</dd>
+<dt>max_dim<span class="classifier">int</span></dt><dd><p>Maximum number of dimensions to consider for reconstruction.</p>
+</dd>
+<dt>test_beta<span class="classifier">float, optional</span></dt><dd><p>Scaling factor for rescaling test data.</p>
+</dd>
+</dl>
+</section>
+<section id="id4">
+<h4>Returns:<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Err<span class="classifier">array-like</span></dt><dd><p>Reconstruction error.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.pca.pca.Xpca.scores">
+<span class="sig-name descname"><span class="pre">scores</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xtest</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/pca/pca.html#Xpca.scores"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.pca.pca.Xpca.scores" title="Link to this definition">¶</a></dt>
+<dd><p>Return the scores, i.e., the coordinates of the points in the array Xtest,
+in the coordinate system given by the principal axes of the extreme points
+(with norm greater than self.thresh_predict) rescaled through the mapping
+x –&gt; ||x||^{-beta} * x where beta = self.beta. The model must have been fit beforehand.
+If <cite>Xtest</cite> is the training data, this gives the usual PCA scores of the rescaled extreme data.</p>
+<section id="id5">
+<h4>Parameters:<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>Xtest<span class="classifier">array-like</span></dt><dd><p>Test data.</p>
+</dd>
+<dt>max_dim<span class="classifier">int, optional</span></dt><dd><p>Maximum number of dimensions to consider for scores.</p>
+</dd>
+</dl>
+</section>
+<section id="id6">
+<h4>Returns:<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>coords_in_pr_axes<span class="classifier">array-like</span></dt><dd><p>Coordinates in the principal axes.</p>
+</dd>
+<dt>X_ext<span class="classifier">array-like</span></dt><dd><p>Extreme points in the test data.</p>
+</dd>
+<dt>mask<span class="classifier">array-like</span></dt><dd><p>Boolean mask indicating extreme points.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="unsupervised.pca.pca.Xpca.screeplot">
+<span class="sig-name descname"><span class="pre">screeplot</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/unsupervised/pca/pca.html#Xpca.screeplot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#unsupervised.pca.pca.Xpca.screeplot" title="Link to this definition">¶</a></dt>
+<dd><p>Generate a scree plot of the eigenvalues.</p>
+<section id="raises">
+<h4>Raises:<a class="headerlink" href="#raises" title="Link to this heading">¶</a></h4>
+<dl class="simple">
+<dt>ValueError</dt><dd><p>If the model has not been fitted.</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
 </section>
 </section>
 
@@ -72,7 +230,17 @@
 <li class="toctree-l1"><a class="reference internal" href="supervised.html">supervised subpackage</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="unsupervised.html">unsupervised subpackage</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">unsupervised.pca sub-subpackage</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unsupervised-pca-pca-sub-submodule">unsupervised.pca.pca sub-submodule</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-unsupervised.pca.pca">unsupervised.pca.pca sub-submodule</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#unsupervised.pca.pca.Xpca"><code class="docutils literal notranslate"><span class="pre">Xpca</span></code></a><ul>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.pca.pca.Xpca.fit"><code class="docutils literal notranslate"><span class="pre">Xpca.fit()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.pca.pca.Xpca.predict"><code class="docutils literal notranslate"><span class="pre">Xpca.predict()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.pca.pca.Xpca.recons_error"><code class="docutils literal notranslate"><span class="pre">Xpca.recons_error()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.pca.pca.Xpca.scores"><code class="docutils literal notranslate"><span class="pre">Xpca.scores()</span></code></a></li>
+<li class="toctree-l5"><a class="reference internal" href="#unsupervised.pca.pca.Xpca.screeplot"><code class="docutils literal notranslate"><span class="pre">Xpca.screeplot()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="unsupervised.feature_clustering.html">unsupervised.feature_clustering sub-subpackage</a></li>
