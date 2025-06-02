@@ -59,11 +59,11 @@ Journal of the Royal Statistical Society Series B: Statistical Methodology, \
 
 
 ## Author
-- Anne Sabourin ([anne.sabourin@math.cnrs.fr](mailto:anne.sabourin@math.cnrs.fr))
+- Anne Sabourin   (anne.sabourin 'at' math.cnrs.fr) 
 
 ## Packaging
-- Pierre-Antoine Amiand-Leroy ([Pierre-Antoine.AMIAND-LEROY@ip-paris.fr](mailto:Pierre-Antoine.AMIAND-LEROY@ip-paris.fr))
-- Stephan Clémençon ([stephan.clemencon@telecom-paris.fr](mailto:stephan.clemencon@telecom-paris.fr))
+- Pierre-Antoine Amiand-Leroy (Pierre-Antoine.AMIAND-LEROY 'at' ip-paris.fr)
+- Stephan Clémençon (stephan.clemencon 'at' telecom-paris.fr)
 
 ## Code Contributors
 - Maël Chiapino
